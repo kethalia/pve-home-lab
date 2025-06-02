@@ -41,7 +41,7 @@ cd /app && docker compose up -d
 ### Install wireguard on both machines
 
 ```shell
-apt update && apt install wireguard-tools -y
+apt update && apt install wireguard -y
 ```
 
 ### Genearte private and public key
