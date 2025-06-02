@@ -38,13 +38,23 @@ cd /app && docker compose up -d
 
 ## Wireguard
 
+Kudos to [Justin Ludwig](https://www.procustodibus.com/authors/justin-ludwig/) and [Pro Custodibus](https://www.procustodibus.com/) for a great [article](https://www.procustodibus.com/blog/2022/09/wireguard-port-forward-from-internet/).
+
 ### Install wireguard on both machines
+
+For in-depth installation guides check [official page](https://www.wireguard.com/install/).
+
+For your hub and server run the following command:
 
 ```shell
 apt update && apt install wireguard -y
 ```
 
 ### Genearte private and public key
+
+For in-depth key generation guides check [official page](https://www.wireguard.com/quickstart/#key-generation)
+
+For your hub and server run the following command:
 
 ```shell
 wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
@@ -61,6 +71,16 @@ Use `wg0-public-server.conf` as a template for your `wg0.conf`
 Use `wg0-private-server.conf` as a template for your `wg0.conf`
 
 #### Create `wg0.conf`
+
+```shell
+nano /etc/wireguard/wg0.conf
+```
+
+Paste your config and save.
+
+## Configure wireguard
+
+Depending on what device you're setting up, there are different ways to add the config.
 
 ```shell
 nano /etc/wireguard/wg0.conf
