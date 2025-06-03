@@ -1,0 +1,88 @@
+services:
+  dokploy-postgres:
+    image: postgres:16
+    restart: "unless-stopped"
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
+    networks:
+      dokploy-network:
+    environment:
+      - POSTGRES_USER=dokploy
+      - POSTGRES_DB=dokploy
+      - POSTGRES_PASSWORD=amukds4wi9001583845717ad2
+    volumes:
+      - dokploy-postgres-database:/var/lib/postgresql/data
+
+  dokploy-redis:
+    image: redis:7
+    restart: "unless-stopped"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
+    networks:
+      dokploy-network:
+    volumes:
+      - redis-data-volume:/data
+
+  dokploy:
+    image: dokploy/dokploy:latest
+    restart: "unless-stopped"
+    depends_on:
+      dokploy-postgres:
+        condition: service_healthy
+      dokploy-redis:
+        condition: service_healthy
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+      update_config:
+        parallelism: 1
+        order: stop-first
+    networks:
+      dokploy-network:
+    ports:
+      - 3000:3000
+    environment:
+      - ADVERTISE_ADDR=$advertise_addr
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/dokploy:/etc/dokploy
+      - dokploy-docker-config:/root/.docker
+
+  dokploy-traefik:
+    image: traefik:v3.1.2
+    restart: always
+    networks:
+      dokploy-network:
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+      - 443:443/udp
+    volumes:
+      - /etc/dokploy/traefik/traefik.yml:/etc/traefik/traefik.yml
+      - /etc/dokploy/traefik/dynamic:/etc/dokploy/traefik/dynamic
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  dokploy-postgres-database:
+  redis-data-volume:
+  dokploy-docker-config:
