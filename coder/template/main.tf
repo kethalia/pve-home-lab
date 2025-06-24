@@ -291,9 +291,15 @@ resource "coder_script" "foundry" {
         exit 1
       fi
 
-      output="$(bash <<< "$script" 2>&1)"
+      getfoundryup="$(bash <<< "$script" 2>&1)"
       if [ $? -ne 0 ]; then
-        echo "Failed to install Foundry: $output"
+        echo "Failed to get Foundry installer: $getfoundryup"
+        exit 1
+      fi
+
+      runfoundryup="$(foundryup)"
+      if [ $? -ne 0 ]; then
+        echo "Failed to run Foundry installer: $runfoundryup"
         exit 1
       fi
     fi
