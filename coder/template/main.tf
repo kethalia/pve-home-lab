@@ -234,9 +234,10 @@ module "nodejs" {
   node_versions = [
     "18",
     "20",
+    "22",
     "node"
   ]
-  default_node_version = "20"
+  default_node_version = "22"
 }
 
 resource "coder_script" "pnpm" {
