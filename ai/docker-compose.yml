@@ -59,6 +59,10 @@ services:
     restart: unless-stopped
     ports:
       - ${COMFY_UI_PORT:-8188}:8188
+    volumes:
+      - ./data/comfy-ui/models:/ComfyUI/models
+      - ./data/comfy-ui/input:/ComfyUI/input
+      - ./data/comfy-ui/output:/ComfyUI/output
     deploy:
       resources:
         reservations:

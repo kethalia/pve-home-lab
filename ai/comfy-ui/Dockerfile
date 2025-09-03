@@ -11,19 +11,12 @@ RUN apt-get update \
 
 EXPOSE 8188
 
-RUN useradd runner --create-home
-USER runner
-
-WORKDIR /home/runner
-
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
 
-WORKDIR /home/runner/ComfyUI
+WORKDIR /ComfyUI
 
 COPY start.sh start.sh
-USER root
 RUN chmod +x start.sh
-USER runner
 
 RUN python3 -m venv comfy-ui
 RUN . ./comfy-ui/bin/activate \
