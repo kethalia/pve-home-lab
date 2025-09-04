@@ -102,41 +102,9 @@ services:
       - PGID=1000
       - TZ=UTC
 
-  readarr:
-    image: lscr.io/linuxserver/readarr:develop
-    restart: "unless-stopped"
-    networks:
-      jellyfin_network:
-        ipv4_address: ${READARR_STATIC_CONTAINER_IP} # E.g. 172.50.0.4
-    ports:
-      - 8787:8787
-    volumes:
-      - /media/readarr:/config
-      - /media/downloads:/downloads
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-
-  jellyseerr:
-    image: fallenbagel/jellyseerr:latest
-    restart: "unless-stopped"
-    networks:
-      jellyfin_network:
-    ports:
-      - 5055:5055
-    volumes:
-      - /media/jellyseerr:/app/config
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     restart: "unless-stopped"
-    devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128
     networks:
       jellyfin_network:
     ports:
@@ -144,12 +112,19 @@ services:
       - 7359:7359/udp
       - 8920:8920
     volumes:
-      - /media/jellyfin:/config
-      - /media/downloads:/downloads
+      - /mnt/media/jellyfin:/config
+      - /mnt/media/downloads:/downloads
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=UTC
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
 # create network: sudo docker network create --subnet 172.50.0.0/16 jellyfin_network
 networks:

@@ -1,0 +1,22 @@
+services:
+  sunshine:
+    build: .
+    restart: unless-stopped
+    ipc: host
+    volumes:
+      - ${CONFIG_PATH-/mnt/sunshine}:/config
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=UTC
+    ports:
+      - "47984-47990:47984-47990/tcp"
+      - "48010:48010"
+      - "47998-48000:47998-48000/udp"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
