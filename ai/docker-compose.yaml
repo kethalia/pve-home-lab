@@ -8,9 +8,7 @@ services:
     ports:
       - ${OPEN_WEBUI_PORT:-8080}:8080
     volumes:
-      - ./data/open-webui:/app/backend/data
-    env_file:
-      - .env
+      - ${OPEN_WEBUI_DATA_DIR-/data/open-webui}:/app/backend/data
     environment:
       - WEBUI_SECRET_KEY
       - OLLAMA_BASE_URL
@@ -26,7 +24,10 @@ services:
     ports:
       - ${OLLAMA_PORT:-11434}:11434
     volumes:
-      - ./data/ollama:/root/.ollama
+      - ${OLLAMA_DATA_DIR-/data/ollama}:/root/.ollama
+    environment:
+      - OLLAMA_FLASH_ATTENTION
+      - OLLAMA_KV_CACHE_TYPE
     deploy:
       resources:
         reservations:
@@ -42,7 +43,7 @@ services:
     ports:
       - ${KOKORO_PORT:-3000}:3000
     volumes:
-      - ./data/kokoro:/kokoro/cache
+      - ${KOKORO_DATA_DIR-/data/kokoro}:/kokoro/cache
     environment:
       - KW_SECRET_API_KEY
     deploy:
@@ -60,9 +61,9 @@ services:
     ports:
       - ${COMFY_UI_PORT:-8188}:8188
     volumes:
-      - ./data/comfy-ui/models:/ComfyUI/models
-      - ./data/comfy-ui/input:/ComfyUI/input
-      - ./data/comfy-ui/output:/ComfyUI/output
+      - ${COMFY_UI_DATA_DIR-/data/comfy-ui}/models:/ComfyUI/models
+      - ${COMFY_UI_DATA_DIR-/data/comfy-ui}/input:/ComfyUI/input
+      - ${COMFY_UI_DATA_DIR-/data/comfy-ui}/output:/ComfyUI/output
     deploy:
       resources:
         reservations:
