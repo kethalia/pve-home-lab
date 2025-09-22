@@ -4,11 +4,11 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    user: "${USER_ID}:${GROUP_ID}"
+    user: 1000:1000
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /mnt/steam/data:/home/lizard/.local/share/Steam:rw
-      - /run/user/${USER_ID}:/run/user/${USER_ID}:rw
+      - /run/user/1000:/run/user/1000:rw
       - /mnt/games:/mnt/games       
     devices:
       - /dev/nvidia0:/dev/nvidia0

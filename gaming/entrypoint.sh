@@ -5,7 +5,7 @@ echo "🎮 Launching Steam..."
 
 # Use X11 instead of Wayland
 export DISPLAY=:0
-export XDG_RUNTIME_DIR=/run/user/${USER_ID}
+export XDG_RUNTIME_DIR=/run/user/1000
 
 # Start D-Bus & PulseAudio
 if ! pgrep dbus-daemon > /dev/null; then
