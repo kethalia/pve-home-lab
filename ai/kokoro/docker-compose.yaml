@@ -1,0 +1,16 @@
+services:
+  kokoro-fastapi-gpu:
+    image: ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.1
+    restart: unless-stopped
+    ports:
+      - ${KOKORO_PORT:-3000}:8880
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

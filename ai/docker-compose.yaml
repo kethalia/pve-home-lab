@@ -43,7 +43,7 @@ services:
     ports:
       - ${KOKORO_PORT:-3000}:3000
     volumes:
-      - ${KOKORO_DATA_DIR-/data/kokoro}:/kokoro/cache
+      - ${KOKORO_DATA_DIR-/dataq}:/kokoro/cache
     environment:
       - KW_SECRET_API_KEY
     deploy:

@@ -1,0 +1,19 @@
+services:
+  ollama:
+    image: ollama/ollama:0.11.11
+    restart: unless-stopped
+    ports:
+      - ${OLLAMA_PORT:-11434}:11434
+    volumes:
+      - ${OLLAMA_DATA_DIR-/mnt/ollama}/data:/root/.ollama
+      - ${OLLAMA_DATA_DIR-/mnt/ollama}/models:/root/.ollama/models
+    environment:
+      - OLLAMA_FLASH_ATTENTION
+      - OLLAMA_KV_CACHE_TYPE
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
