@@ -4,10 +4,7 @@ FROM lizardbyte/sunshine:latest-ubuntu-24.04
 # Update and install Steam + dependencies
 USER root
 RUN apt update \
-    && apt install -y software-properties-common \
-    && add-apt-repository multiverse \
-    && apt update \
-    && apt install -y steam 
+    && apt install -y steam-installer steam-devices 
 USER lizard
 
 # Start Sunshine (default entrypoint)
