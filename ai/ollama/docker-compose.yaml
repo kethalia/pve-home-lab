@@ -8,8 +8,6 @@ services:
       - ${OLLAMA_DATA_DIR-/mnt/ollama/data}:/root/.ollama
       - ${OLLAMA_MODELS_DIR-/mnt/ollama/models}:/root/.ollama/models
     environment:
-      - PUID=1005
-      - PGID=1005
       - OLLAMA_FLASH_ATTENTION
       - OLLAMA_KV_CACHE_TYPE
     deploy:
