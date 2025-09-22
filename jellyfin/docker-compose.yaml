@@ -36,9 +36,6 @@ services:
       - ${ROOT_DIR-/mnt/media}/downloads:/downloads
     environment:
       - WEBUI_PORT=5080
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -49,10 +46,6 @@ services:
     network_mode: service:vpn
     volumes:
       - ${ROOT_DIR-/mnt/media}/prowlarr:/config
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
 
   radarr:
     image: lscr.io/linuxserver/radarr:latest
@@ -65,10 +58,6 @@ services:
     volumes:
       - ${ROOT_DIR-/mnt/media}/radarr:/config
       - ${ROOT_DIR-/mnt/media}/downloads:/downloads
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
@@ -81,10 +70,6 @@ services:
     volumes:
       - ${ROOT_DIR-/mnt/media}/sonarr:/config
       - ${ROOT_DIR-/mnt/media}/downloads:/downloads
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -97,10 +82,6 @@ services:
     volumes:
       - ${ROOT_DIR-/mnt/media}/bazarr:/config
       - ${ROOT_DIR-/mnt/media}/downloads:/downloads
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
 
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
@@ -112,10 +93,6 @@ services:
     volumes:
       - ${ROOT_DIR-/mnt/media}/jellyfin:/config
       - ${ROOT_DIR-/mnt/media}/downloads:/downloads
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
     devices:
       - /dev/nvidia0:/dev/nvidia0
       - /dev/nvidiactl:/dev/nvidiactl
