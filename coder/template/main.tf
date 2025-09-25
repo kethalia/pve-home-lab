@@ -52,10 +52,6 @@ resource "coder_agent" "main" {
     GIT_AUTHOR_EMAIL    = "${data.coder_workspace_owner.me.email}"
     GIT_COMMITTER_NAME  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
     GIT_COMMITTER_EMAIL = "${data.coder_workspace_owner.me.email}"
-
-    POSTGRES_USER     = "postgres_user"
-    POSTGRES_PASSWORD = "postgres_password"
-    POSTGRES_DB       = "postgres_db"
     
     EXTENSIONS_GALLERY="{\"serviceUrl\":\"https://marketplace.visualstudio.com/_apis/public/gallery\"}"
   }
@@ -180,24 +176,24 @@ module "code-server" {
 }
 
 # See https://registry.coder.com/modules/jetbrains-gateway
-module "jetbrains_gateway" {
-  count  = data.coder_workspace.me.start_count
-  source = "registry.coder.com/modules/jetbrains-gateway/coder"
+# module "jetbrains_gateway" {
+#   count  = data.coder_workspace.me.start_count
+#   source = "registry.coder.com/modules/jetbrains-gateway/coder"
 
-  # JetBrains IDEs to make available for the user to select
-  jetbrains_ides = ["IU", "PS", "WS", "PY", "CL", "GO", "RM", "RD", "RR"]
-  default        = "IU"
+#   # JetBrains IDEs to make available for the user to select
+#   jetbrains_ides = ["IU", "PS", "WS", "PY", "CL", "GO", "RM", "RD", "RR"]
+#   default        = "IU"
 
-  # Default folder to open when starting a JetBrains IDE
-  folder = "/home/coder"
+#   # Default folder to open when starting a JetBrains IDE
+#   folder = "/home/coder"
 
-  # This ensures that the latest version of the module gets downloaded, you can also pin the module version to prevent breaking changes in production.
-  version = ">= 1.0.0"
+#   # This ensures that the latest version of the module gets downloaded, you can also pin the module version to prevent breaking changes in production.
+#   version = ">= 1.0.0"
 
-  agent_id   = coder_agent.main.id
-  agent_name = "main"
-  order      = 2
-}
+#   agent_id   = coder_agent.main.id
+#   agent_name = "main"
+#   order      = 2
+# }
 
 # See https://registry.coder.com/modules/coder/cursor
 module "cursor" {
@@ -208,12 +204,12 @@ module "cursor" {
 }
 
 # See https://registry.coder.com/modules/coder/zed
-module "zed" {
-  count    = data.coder_workspace.me.start_count
-  source   = "registry.coder.com/coder/zed/coder"
-  version  = "1.1.0"
-  agent_id = coder_agent.main.id
-}
+# module "zed" {
+#   count    = data.coder_workspace.me.start_count
+#   source   = "registry.coder.com/coder/zed/coder"
+#   version  = "1.1.0"
+#   agent_id = coder_agent.main.id
+# }
 
 # See https://registry.coder.com/modules/coder/filebrowser
 module "filebrowser" {
@@ -404,67 +400,8 @@ resource "coder_script" "zsh" {
   start_blocks_login = true
 }
 
-resource "coder_script" "pg" {
-  agent_id     = coder_agent.main.id
-  display_name = "PostgreSQL"
-  icon         = "https://ipfs.chillwhales.dev/ipfs/QmPnRamLULfnkxaaVGcFE1EAX5dv3MTRVjYuZofsVXuBeT"
-  script = <<EOT
-    #!/bin/bash
-
-    BOLD='\033[0;1m'
-    CODE='\033[36;40;1m'
-    RESET='\033[0m'
-
-    printf "$${BOLD}Setting up PostgreSQL!$${RESET}\n"
-
-    setup="$(
-      sudo sed -i "s|^listen_addresses = .*|listen_addresses = 'localhost'|g" /etc/postgresql/16/main/postgresql.conf 2>&1 \
-        && sudo service postgresql restart 2>&1 \
-        && sudo -u postgres createuser $POSTGRES_USER 2>&1 \
-        && sudo -u postgres createdb $POSTGRES_DB 2>&1 \
-        && sudo -u postgres -H -- psql -c "ALTER USER $POSTGRES_USER WITH ENCRYPTED PASSWORD '$POSTGRES_PASSWORD';" 2>&1 \
-        && sudo -u postgres -H -- psql -c "ALTER DATABASE $POSTGRES_DB OWNER TO $POSTGRES_USER;" 2>&1
-    )"
-    if [ $? -ne 0 ]; then
-        echo "Failed to setup PostgreSQL database, user & password: $setup"
-        exit 1
-    fi
-
-    printf "🥳 PostgreSQL setup has been updated\n\n"
-  EOT
-  run_on_start       = true
-  start_blocks_login = true
-}
-
 resource "docker_volume" "home_volume" {
   name = "coder-${data.coder_workspace.me.id}-home"
-  # Protect the volume from being deleted due to changes in attributes.
-  lifecycle {
-    ignore_changes = all
-  }
-  # Add labels in Docker to keep track of orphan resources.
-  labels {
-    label = "coder.owner"
-    value = data.coder_workspace_owner.me.name
-  }
-  labels {
-    label = "coder.owner_id"
-    value = data.coder_workspace_owner.me.id
-  }
-  labels {
-    label = "coder.workspace_id"
-    value = data.coder_workspace.me.id
-  }
-  # This field becomes outdated if the workspace is renamed but can
-  # be useful for debugging or cleaning out dangling volumes.
-  labels {
-    label = "coder.workspace_name_at_creation"
-    value = data.coder_workspace.me.name
-  }
-}
-
-resource "docker_volume" "postgres_volume" {
-  name = "coder-${data.coder_workspace.me.id}-postgres"
   # Protect the volume from being deleted due to changes in attributes.
   lifecycle {
     ignore_changes = all
@@ -517,11 +454,6 @@ resource "docker_container" "workspace" {
   volumes {
     container_path = "/home/coder"
     volume_name    = docker_volume.home_volume.name
-    read_only      = false
-  }
-  volumes {
-    container_path = "/var/lib/postgresql/data"
-    volume_name    = docker_volume.postgres_volume.name
     read_only      = false
   }
 
