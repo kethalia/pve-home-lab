@@ -159,20 +159,22 @@ module "code-server" {
     "saoudrizwan.claude-dev"
   ]
   settings = {
-    "files.autoSave": "off",
-    "editor.wordWrap": "on",
-    "editor.fontFamily": "Fira Code",
-    "editor.fontLigatures": true,
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "[solidity]": {
-        "editor.defaultFormatter": "NomicFoundation.hardhat-solidity"
-    },
-    "workbench.colorTheme": "Dark Modern (OLED Black) [Orange]",
-    "workbench.iconTheme": "material-icon-theme",
-    "terminal.integrated.scrollback": 10000,
-    "git.confirmSync": true
-  }
+  "[solidity]": {
+    "editor.defaultFormatter": "NomicFoundation.hardhat-solidity"
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.fontFamily": "Fira Code",
+  "editor.fontLigatures": true,
+  "editor.formatOnSave": true,
+  "editor.wordWrap": "on",
+  "files.autoSave": "off",
+  "git.confirmSync": false,
+  "terminal.integrated.scrollback": 10000,
+  "workbench.colorTheme": "Dark Modern (OLED Black) [Orange]",
+  "workbench.iconTheme": "material-icon-theme",
+  "solidity.telemetry": false,
+  "solidity.formatter": "forge"
+}
 }
 
 # See https://registry.coder.com/modules/jetbrains-gateway
