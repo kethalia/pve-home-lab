@@ -504,6 +504,26 @@ resource "coder_script" "development_tools" {
       rm /tmp/act.tar.gz
     '
 
+    # Install GitHub CLI
+    install_if_missing "GitHub CLI" "gh" "" '
+      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg &&
+      sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg &&
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null &&
+      sudo apt-get update &&
+      sudo apt-get install gh -y
+    '
+
+    # Configure GitHub CLI authentication using Coder external auth token
+    if command_exists gh && [ -n "${data.coder_external_auth.github.access_token}" ]; then
+      if ! gh auth status &>/dev/null; then
+        printf "$${BOLD}🔐 Configuring GitHub CLI authentication...$${RESET}\n"
+        echo "${data.coder_external_auth.github.access_token}" | gh auth login --with-token
+        printf "$${GREEN}✅ GitHub CLI authenticated$${RESET}\n\n"
+      else
+        printf "$${GREEN}✅ GitHub CLI already authenticated$${RESET}\n\n"
+      fi
+    fi
+
     # Source updated shell configuration
     source $HOME/.zshrc 2>/dev/null || true
 
