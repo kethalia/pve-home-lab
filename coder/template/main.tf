@@ -322,6 +322,7 @@ module "code-server" {
     "usernamehw.errorlens",
     "streetsidesoftware.code-spell-checker",
     "wayou.vscode-todo-highlight",
+    "sst-dev.opencode",
   ]
 
   settings = {
@@ -511,6 +512,11 @@ resource "coder_script" "development_tools" {
       echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null &&
       sudo apt-get update &&
       sudo apt-get install gh -y
+    '
+
+    # Install opencode CLI
+    install_if_missing "opencode" "opencode" "" '
+      curl -fsSL https://opencode.ai/install | bash
     '
 
     # Configure GitHub CLI authentication using Coder external auth token
