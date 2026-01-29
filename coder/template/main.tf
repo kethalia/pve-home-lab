@@ -347,16 +347,12 @@ module "code-server" {
 }
 
 module "opencode" {
-  source              = "registry.coder.com/coder-labs/opencode/coder"
-  version             = "0.1.1"
-  agent_id            = coder_agent.main.id
-  workdir             = "/home/coder"
-  report_tasks        = false
-  cli_app             = true
-  post_install_script = <<-EOT
-    #!/bin/bash
-    opencode serve --port 62748
-  EOT
+  source       = "registry.coder.com/coder-labs/opencode/coder"
+  version      = "0.1.1"
+  agent_id     = coder_agent.main.id
+  workdir      = "/home/coder"
+  report_tasks = false
+  cli_app      = true
 }
 
 resource "coder_app" "opencode_ui" {
@@ -367,6 +363,35 @@ resource "coder_app" "opencode_ui" {
   icon         = "/icon/opencode.svg"
   subdomain    = true
   share        = "owner"
+}
+
+resource "coder_script" "opencode_serve" {
+  agent_id           = coder_agent.main.id
+  display_name       = "OpenCode Serve"
+  icon               = "/icon/opencode.svg"
+  run_on_start       = true
+  start_blocks_login = false
+
+  script = <<EOT
+    #!/bin/bash
+    set -e
+
+    # Wait for opencode to be installed by the module
+    max_attempts=30
+    attempt=0
+    while ! command -v opencode &> /dev/null; do
+      attempt=$((attempt + 1))
+      if [ "$attempt" -ge "$max_attempts" ]; then
+        echo "ERROR: opencode CLI not found after $max_attempts attempts"
+        exit 1
+      fi
+      echo "Waiting for opencode CLI to be installed... (attempt $attempt/$max_attempts)"
+      sleep 2
+    done
+
+    echo "Starting opencode serve on port 62748..."
+    opencode serve --port 62748 &
+  EOT
 }
 
 module "filebrowser" {
