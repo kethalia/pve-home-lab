@@ -376,6 +376,9 @@ resource "coder_script" "opencode_serve" {
     #!/bin/bash
     set -e
 
+    # Add opencode install path to PATH
+    export PATH="/home/coder/.opencode/bin:$PATH"
+
     # Wait for opencode to be installed by the module
     max_attempts=30
     attempt=0
