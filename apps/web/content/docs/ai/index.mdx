@@ -1,0 +1,77 @@
+---
+title: AI Stack
+description: Self-hosted AI services — Ollama for LLM inference, Open WebUI for chat, Kokoro for text-to-speech, and ComfyUI for image generation.
+---
+
+## Overview
+
+The AI stack runs four GPU-accelerated services on a single VM with NVIDIA GPU passthrough. Together they provide a fully self-hosted alternative to cloud AI APIs.
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────┐
+│  AI VM (NVIDIA GPU passthrough)              │
+│                                              │
+│  ┌─────────────┐     ┌──────────────┐        │
+│  │ Open WebUI   │────▶│ Ollama       │        │
+│  │ :8080        │     │ :11434       │        │
+│  │ (Chat UI)    │     │ (LLM Engine) │        │
+│  │              │     └──────────────┘        │
+│  │              │     ┌──────────────┐        │
+│  │              │────▶│ Kokoro       │        │
+│  │              │     │ :3000        │        │
+│  └──────────────┘     │ (TTS)        │        │
+│                       └──────────────┘        │
+│  ┌──────────────┐                             │
+│  │ ComfyUI      │                             │
+│  │ :8188        │                             │
+│  │ (Image Gen)  │                             │
+│  └──────────────┘                             │
+└──────────────────────────────────────────────┘
+```
+
+- **Open WebUI** is the main user-facing interface. It connects to Ollama for LLM inference and Kokoro for text-to-speech.
+- **Ollama** runs the actual LLM models on the GPU.
+- **Kokoro** provides TTS via an OpenAI-compatible API.
+- **ComfyUI** is a standalone node-based image generation tool (Stable Diffusion).
+
+## Requirements
+
+- NVIDIA GPU with CUDA support (all services require GPU)
+- [NVIDIA Container Toolkit](/docs/getting-started/docker-installation#enable-nvidia-container-toolkit) installed
+- Docker and Docker Compose
+
+## Quick start
+
+```bash
+cd infra/ai
+
+# Create .env from the example
+cp .env.example .env
+nano .env  # Set ports, data dirs, and secrets
+
+# Start all services
+docker compose up -d
+
+# Check status
+docker compose ps
+```
+
+Open WebUI will be available at `http://<vm-ip>:8080`.
+
+## Standalone deployments
+
+In addition to the all-in-one stack, there are standalone compose files for deploying individual services:
+
+- **Ollama only**: `infra/ai/ollama/docker-compose.yaml` — runs Ollama with separate data and model mount points, using a single GPU
+- **Kokoro only**: `infra/ai/kokoro/docker-compose.yaml` — runs the Kokoro FastAPI GPU variant with a single GPU
+
+These are useful when you want to run a service on a different machine or with different GPU allocation.
+
+## Sections
+
+- [Ollama](/docs/ai/ollama) — LLM inference engine
+- [Open WebUI](/docs/ai/open-webui) — Chat interface
+- [Kokoro](/docs/ai/kokoro) — Text-to-speech
+- [ComfyUI](/docs/ai/comfyui) — Image generation

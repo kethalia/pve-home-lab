@@ -1,0 +1,42 @@
+---
+title: Getting Started
+description: Hardware recommendations, Proxmox VE setup, Docker installation, and network topology for the home lab.
+---
+
+## Overview
+
+This section covers everything you need to go from bare metal to a working home lab platform. By the end, you will have Proxmox VE installed on your server, Docker running inside VMs and LXC containers, and a clear understanding of how the network fits together.
+
+## What you will build
+
+A single physical server running Proxmox VE as the hypervisor, hosting multiple virtual machines and containers, each dedicated to a specific workload:
+
+| VM / LXC | Purpose | Key requirement |
+|---|---|---|
+| AI VM | LLM inference, TTS, image generation | NVIDIA GPU passthrough |
+| Media VM | Jellyfin, automated downloading | GPU transcoding, large storage |
+| Gaming VM | Sunshine + Steam cloud gaming | GPU passthrough, low latency |
+| Blockchain VM | LUKSO full node (Geth + Lighthouse) | 100GB+ SSD, stable network |
+| Deployment LXC | Dokploy PaaS (Traefik, Postgres, Redis) | Ports 80/443 available |
+| Development LXC | Coder cloud workspaces | Docker socket access |
+
+## Recommended hardware
+
+These are minimum and recommended specs for running the full stack. You can start with less if you only need a subset of services.
+
+| Component | Minimum | Recommended |
+|---|---|---|
+| CPU | 8 cores / 16 threads | 16+ cores / 32 threads |
+| RAM | 32 GB | 64+ GB |
+| Boot drive | 256 GB SSD | 512 GB NVMe |
+| Data storage | 1 TB HDD | 2+ TB NVMe or SSD array |
+| GPU | NVIDIA GTX 1060 | NVIDIA RTX 3070+ |
+| Network | 1 Gbps | 2.5 Gbps |
+
+The NVIDIA GPU is required for AI inference (Ollama, ComfyUI), media transcoding (Jellyfin), and game streaming (Sunshine). AMD GPUs are not covered by this guide.
+
+## Next steps
+
+1. [Install and configure Proxmox VE](/docs/getting-started/proxmox-setup)
+2. [Install Docker on your VMs and containers](/docs/getting-started/docker-installation)
+3. [Understand the network topology](/docs/getting-started/networking)

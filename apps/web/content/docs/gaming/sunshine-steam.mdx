@@ -1,0 +1,145 @@
+---
+title: Sunshine + Steam Setup
+description: Full setup guide for the Sunshine game streaming server with Steam and NVIDIA GPU passthrough.
+---
+
+## Overview
+
+This setup runs Sunshine (a Moonlight-compatible game streaming server) with Steam pre-installed in a custom Docker container. Games run on the NVIDIA GPU and are streamed to any Moonlight client over the network.
+
+## Prerequisites
+
+- A VM with NVIDIA GPU passthrough configured ([Proxmox setup guide](/docs/getting-started/proxmox-setup#gpu-passthrough-iommu))
+- NVIDIA drivers installed in the VM
+- [Docker installed](/docs/getting-started/docker-installation)
+- [NVIDIA Container Toolkit](/docs/getting-started/docker-installation#enable-nvidia-container-toolkit)
+
+## Custom Dockerfile
+
+The container is built from `infra/gaming/Dockerfile`:
+
+```dockerfile
+# Use sunshine base image
+FROM lizardbyte/sunshine:latest-ubuntu-24.04
+
+# Update and install Steam + dependencies
+USER root
+RUN apt update \
+    && apt install -y steam-installer steam-devices
+USER lizard
+
+# Start Sunshine (default entrypoint)
+ENTRYPOINT ["/usr/bin/sunshine"]
+```
+
+This extends the official Sunshine image with the Steam client and device support packages. The container runs as the `lizard` user (Sunshine's default).
+
+## Docker Compose
+
+From `infra/gaming/docker-compose.yaml`:
+
+```yaml
+services:
+  sunshine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - /mnt/steam/data:/home/lizard/.local/share/Steam
+      - /mnt/games:/mnt/games
+    devices:
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+      - /dev/nvidia-caps:/dev/nvidia-caps
+    ports:
+      - 47984-47990:47984-47990/tcp
+      - 48010:48010/tcp
+      - 47998-48000:47998-48000/udp
+```
+
+## GPU passthrough
+
+Five NVIDIA device files are mapped into the container:
+
+| Device | Purpose |
+|---|---|
+| `/dev/nvidia0` | Primary GPU |
+| `/dev/nvidiactl` | GPU control interface |
+| `/dev/nvidia-uvm` | Unified Virtual Memory |
+| `/dev/nvidia-uvm-tools` | UVM debugging tools |
+| `/dev/nvidia-caps` | GPU capabilities |
+
+All five must be accessible in the VM. Verify with:
+
+```bash
+ls -la /dev/nvidia*
+```
+
+## Port mappings
+
+| Port | Protocol | Purpose |
+|---|---|---|
+| 47984-47990 | TCP | Sunshine control and streaming |
+| 48010 | TCP | Sunshine web UI (HTTPS) |
+| 47998-48000 | UDP | Game streaming data |
+
+## Volume mounts
+
+| Host path | Container path | Purpose |
+|---|---|---|
+| `/mnt/steam/data` | `/home/lizard/.local/share/Steam` | Steam client data, game installs |
+| `/mnt/games` | `/mnt/games` | Additional game storage |
+
+Mounting Steam data to a persistent host directory means games survive container rebuilds.
+
+## Setup steps
+
+### 1. Build and start
+
+```bash
+cd infra/gaming
+docker compose up -d
+```
+
+The first build downloads the Sunshine base image and installs Steam, which takes a few minutes.
+
+### 2. Configure Sunshine
+
+Open `https://<vm-ip>:47990` in a browser. You will need to accept the self-signed certificate. Create a username and password for the Sunshine web admin.
+
+### 3. Connect with Moonlight
+
+1. Install [Moonlight](https://moonlight-stream.org/) on your client device (PC, phone, TV, etc.)
+2. Open Moonlight and enter the VM's IP address
+3. Moonlight will show a PIN — enter it in the Sunshine web UI under **PIN**
+4. Once paired, Sunshine's desktop and Steam will appear as available streams
+
+### 4. Install games
+
+Launch Steam from within the Sunshine stream, log in with your Steam account, and install games. They will be stored in `/mnt/steam/data` (persistent).
+
+## Performance tips
+
+- Use a **wired ethernet connection** on both the server and client for lowest latency
+- Set Moonlight to **1080p 60fps** as a starting point, then increase resolution/framerate based on your GPU and network
+- Ensure the VM has exclusive GPU access — don't share the GPU with other VMs
+- Use **NVENC** for video encoding (Sunshine uses this by default with NVIDIA GPUs)
+
+## Troubleshooting
+
+**Moonlight can't find the server**: Ensure ports 47984-47990 (TCP), 48010 (TCP), and 47998-48000 (UDP) are accessible. Check `docker compose ps` to verify the container is running.
+
+**Black screen after connecting**: The GPU may not be properly passed through. Check `nvidia-smi` inside the container: `docker compose exec sunshine nvidia-smi`.
+
+**Steam won't launch**: Steam requires a display. Sunshine provides a virtual display, but if it's not working, check Sunshine logs: `docker compose logs sunshine`.
+
+**Input lag**: Switch from Wi-Fi to wired ethernet. Reduce stream resolution. Ensure the VM is not CPU-bottlenecked.
+
+## References
+
+- [Sunshine documentation](https://docs.lizardbyte.dev/projects/sunshine/)
+- [Moonlight documentation](https://github.com/moonlight-stream/moonlight-docs)
+- [Apollo Docker setup](https://github.com/ClassicOldSong/Apollo/blob/master/DOCKER_README.md)

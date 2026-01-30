@@ -1,0 +1,168 @@
+---
+title: Jellyfin Stack Setup
+description: Full setup guide for the Jellyfin media stack with VPN, arr-stack, and GPU transcoding.
+---
+
+## Overview
+
+This page covers the complete setup of the 7-service media stack defined in `infra/jellyfin/docker-compose.yaml`. Setup is inspired by the [media-stack](https://github.com/navilg/media-stack) project with modifications for VPN routing and NVIDIA GPU transcoding.
+
+## Prerequisites
+
+- [Docker installed](/docs/getting-started/docker-installation)
+- [NVIDIA Container Toolkit](/docs/getting-started/docker-installation#enable-nvidia-container-toolkit) (for Jellyfin transcoding)
+- A VPN provider that supports WireGuard (the config uses ProtonVPN)
+- GPU device files accessible at `/dev/nvidia*`
+
+## Network setup
+
+The stack uses a custom Docker network with a fixed subnet. Create it before starting:
+
+```bash
+sudo docker network create --subnet 172.50.0.0/16 jellyfin_network
+```
+
+This is required because Radarr, Sonarr, and Bazarr use static IP addresses on this network.
+
+## Environment variables
+
+Create `.env` from `infra/jellyfin/.env.example`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `ROOT_DIR` | `/mnt/media` | Base directory for all service configs and downloads |
+| `VPN_SERVICE_PROVIDER` | `protonvpn` | VPN provider name (see [Gluetun docs](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers)) |
+| `VPN_TYPE` | `wireguard` | VPN protocol |
+| `WIREGUARD_PRIVATE_KEY` | — | Your VPN WireGuard private key |
+| `SERVER_COUNTRIES` | `Netherlands` | VPN server country selection |
+| `RADARR_STATIC_CONTAINER_IP` | `172.50.0.2` | Static IP for Radarr on jellyfin_network |
+| `SONARR_STATIC_CONTAINER_IP` | `172.50.0.3` | Static IP for Sonarr |
+| `BAZARR_STATIC_CONTAINER_IP` | `172.50.0.4` | Static IP for Bazarr |
+
+## Services
+
+### Gluetun (VPN gateway)
+
+```yaml
+vpn:
+  image: qmcgaw/gluetun:latest
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun:/dev/net/tun
+```
+
+Gluetun creates a VPN tunnel and exposes ports for services that run in its network namespace. qBittorrent (5080) and Prowlarr (9696) ports are defined here because those services use `network_mode: service:vpn`.
+
+### qBittorrent (download client)
+
+```yaml
+qbittorrent:
+  image: lscr.io/linuxserver/qbittorrent:latest
+  network_mode: service:vpn
+  volumes:
+    - ${ROOT_DIR}/qbittorrent:/config
+    - ${ROOT_DIR}/downloads:/downloads
+```
+
+Runs entirely inside Gluetun's network — all traffic goes through the VPN. Access the web UI at `http://<vm-ip>:5080`.
+
+### Prowlarr (indexer manager)
+
+```yaml
+prowlarr:
+  image: lscr.io/linuxserver/prowlarr:latest
+  network_mode: service:vpn
+```
+
+Also runs behind the VPN. Access at `http://<vm-ip>:9696`. Configure your indexer sites here, then connect Prowlarr to Radarr and Sonarr.
+
+### Radarr (movies)
+
+Manages movie downloads. Access at `http://<vm-ip>:7878`. Uses a static IP (`172.50.0.2`) so Prowlarr (behind VPN) can reach it.
+
+### Sonarr (TV shows)
+
+Same as Radarr but for TV series. Access at `http://<vm-ip>:8989`. Static IP: `172.50.0.3`.
+
+### Bazarr (subtitles)
+
+Automatically downloads subtitles for media managed by Radarr and Sonarr. Access at `http://<vm-ip>:6767`. Static IP: `172.50.0.4`.
+
+### Jellyfin (media player)
+
+```yaml
+jellyfin:
+  image: lscr.io/linuxserver/jellyfin:latest
+  ports:
+    - 8096:8096
+    - 7359:7359/udp
+    - 8920:8920
+  devices:
+    - /dev/nvidia0:/dev/nvidia0
+    - /dev/nvidiactl:/dev/nvidiactl
+    - /dev/nvidia-uvm:/dev/nvidia-uvm
+    - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+    - /dev/nvidia-caps:/dev/nvidia-caps
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
+```
+
+Access the media player at `http://<vm-ip>:8096`. Uses both device mappings and the NVIDIA runtime for GPU transcoding.
+
+## GPU passthrough
+
+Jellyfin requires NVIDIA GPU access for hardware-accelerated transcoding. The VM must satisfy:
+
+1. GPU passthrough from Proxmox to the VM is configured
+2. NVIDIA drivers are installed in the VM
+3. Device files exist with correct permissions:
+
+```bash
+# Verify devices exist
+find /dev/dri -perm 777 -type f
+# Should show: /dev/dri/renderD128 and /dev/dri/card0
+
+# If empty, fix permissions
+chmod 777 /dev/dri/*
+```
+
+If the device files don't exist at all, you need to configure device passthrough from the Proxmox host to the VM for `/dev/dri/renderD128` and `/dev/dri/card0`.
+
+## Directory structure
+
+All service data lives under `ROOT_DIR` (default: `/mnt/media`):
+
+```
+/mnt/media/
+├── downloads/        # Shared download directory
+├── qbittorrent/      # qBittorrent config
+├── prowlarr/         # Prowlarr config
+├── radarr/           # Radarr config
+├── sonarr/           # Sonarr config
+├── bazarr/           # Bazarr config
+└── jellyfin/         # Jellyfin config and metadata
+```
+
+## Post-install configuration
+
+1. **Prowlarr** (`http://<ip>:9696`): Add indexer sites and connect to Radarr and Sonarr via their static IPs
+2. **Radarr** (`http://<ip>:7878`): Add qBittorrent as a download client (host: `localhost`, port: `5080` — because qBittorrent is in the VPN network), add root folder `/downloads`
+3. **Sonarr** (`http://<ip>:8989`): Same as Radarr
+4. **Bazarr** (`http://<ip>:6767`): Connect to Radarr and Sonarr, configure subtitle providers
+5. **Jellyfin** (`http://<ip>:8096`): Run the setup wizard, add media libraries pointing to `/downloads`, enable hardware acceleration under **Dashboard > Playback > Transcoding**
+
+## Troubleshooting
+
+**qBittorrent unreachable**: Check that Gluetun is healthy (`docker compose ps vpn`). If the VPN connection fails, qBittorrent won't be accessible.
+
+**Radarr/Sonarr can't reach Prowlarr**: Prowlarr is behind the VPN. Use the VPN container's IP or the static IP you configured for indexer connections.
+
+**Jellyfin transcoding fails**: Ensure the NVIDIA devices are passed through and permissions are correct. Check `docker compose logs jellyfin` for GPU errors.
+
+**All downloads are slow**: Check your VPN connection speed. Try a different `SERVER_COUNTRIES` in `.env`.

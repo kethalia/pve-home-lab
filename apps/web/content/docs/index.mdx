@@ -1,20 +1,54 @@
 ---
-title: Welcome
-description: Documentation for a Proxmox VE home lab.
+title: PVE Home Lab
+description: Documentation for a Proxmox VE home lab running Docker-based services across AI, media, gaming, blockchain, and development workloads.
 ---
 
-## Overview
+## What is this?
 
-This is the documentation site for a Proxmox VE home lab environment running
-Docker-based services across AI/ML, media, gaming, blockchain, and development
-workloads.
+A self-hosted home lab built on [Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview), running a collection of Docker-based services across multiple VMs and LXC containers. Everything is defined as code — Docker Compose files, Terraform templates, shell scripts — and documented here.
 
-## Services
+## Architecture
 
-- **AI Stack** — Ollama, Open WebUI, Kokoro TTS, ComfyUI
-- **Development** — Coder cloud workspaces
-- **Deployment** — Dokploy self-hosted PaaS
-- **Media** — Jellyfin with automated downloading
-- **Gaming** — Sunshine + Steam cloud gaming
-- **Blockchain** — LUKSO node with monitoring
-- **Networking** — WireGuard VPN tunnels
+```
+Proxmox VE Host
+├── VM: AI / ML workloads (GPU passthrough)
+│   ├── Ollama (LLM inference)
+│   ├── Open WebUI (chat interface)
+│   ├── Kokoro (text-to-speech)
+│   └── ComfyUI (image generation)
+├── VM: Media Server (GPU transcoding)
+│   ├── Jellyfin (media player)
+│   ├── Gluetun (VPN gateway)
+│   ├── qBittorrent (downloads)
+│   └── Radarr / Sonarr / Prowlarr / Bazarr
+├── VM: Gaming (GPU passthrough)
+│   └── Sunshine + Steam (cloud gaming)
+├── VM: Blockchain
+│   ├── Geth (execution client)
+│   ├── Lighthouse (consensus client)
+│   └── Prometheus + Grafana (monitoring)
+├── LXC: Deployment
+│   └── Dokploy (PaaS with Traefik)
+├── LXC: Development
+│   └── Coder (cloud dev environments)
+└── VPS: Public Proxy
+    ├── WireGuard (VPN tunnel)
+    └── Nginx Proxy Manager
+```
+
+## Documentation Sections
+
+| Section | What it covers |
+|---|---|
+| [Getting Started](/docs/getting-started) | Hardware, Proxmox setup, Docker installation, network topology |
+| [AI Stack](/docs/ai) | Ollama, Open WebUI, Kokoro TTS, ComfyUI — all GPU-accelerated |
+| [Development](/docs/development) | Coder cloud workspaces with Terraform templates |
+| [Deployment](/docs/deployment) | Dokploy self-hosted PaaS with Traefik reverse proxy |
+| [Media](/docs/media) | Jellyfin media server with VPN-routed automated downloading |
+| [Gaming](/docs/gaming) | Sunshine + Steam cloud gaming via Moonlight |
+| [Blockchain](/docs/blockchain) | LUKSO full node with Geth + Lighthouse and Grafana monitoring |
+| [Networking](/docs/networking) | WireGuard VPN tunnels and Nginx Proxy Manager |
+
+## Source Code
+
+All infrastructure configurations live in the [`infra/`](https://github.com/kethalia/pve-home-lab/tree/main/infra) directory of the repository, organized by service.

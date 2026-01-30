@@ -1,0 +1,171 @@
+---
+title: Coder Template
+description: Deep dive into the Terraform configuration, Dockerfile, VS Code extensions, and development tools in the Coder workspace template.
+---
+
+## Overview
+
+The workspace template is defined in `infra/coder/template/` and consists of a Terraform configuration (`main.tf`) and a Dockerfile. Together they define a complete development environment that Coder provisions as a Docker container.
+
+## Template structure
+
+```
+infra/coder/template/
+├── main.tf         # Terraform configuration (644 lines)
+├── Dockerfile      # Container image definition
+└── README.md       # Template documentation
+```
+
+## Terraform configuration
+
+The `main.tf` defines all workspace resources using two Terraform providers:
+
+- **coder/coder**: Manages the Coder agent, apps, scripts, and modules
+- **kreuzwerker/docker**: Creates the Docker container and volumes
+
+### Workspace parameters
+
+```hcl
+variable "docker_socket" {
+  description = "(Optional) Docker socket URI"
+  type        = string
+  default     = ""
+}
+
+variable "dotfiles_uri" {
+  description = "Git URI for dotfiles repository (optional)"
+  type        = string
+  default     = ""
+}
+```
+
+### Agent startup script
+
+The Coder agent runs a startup script that handles:
+
+1. **First-boot initialization** (runs once):
+   - Creates `~/projects`, `~/bin`, `~/.config` directories
+   - Sets up git aliases (`st`, `co`, `br`, `cm`, `lg`)
+   - Clones dotfiles repository if configured
+   - Generates a workspace README with quick-start instructions
+
+2. **Per-start tasks** (runs every time):
+   - Verifies Docker socket access
+   - Sources shell configuration
+
+### Coder modules
+
+The template uses several official Coder modules:
+
+| Module | Purpose |
+|---|---|
+| `code-server` | VS Code in the browser with 19 extensions |
+| `opencode` | AI coding assistant (CLI + web UI on port 62748) |
+| `filebrowser` | Web-based file manager |
+| `github-upload-public-key` | Syncs SSH keys to GitHub |
+| `git-commit-signing` | GPG commit signing |
+| `git-config` | Git user configuration |
+| `nodejs` | Node.js version manager (18, 20, 22, 24) |
+
+### VS Code extensions
+
+19 extensions are pre-installed and configured:
+
+| Extension | Purpose |
+|---|---|
+| `dark-modern-oled-theme-set` | Color theme |
+| `material-icon-theme` | File icons |
+| `prisma` | Prisma ORM |
+| `vscode-graphql` + `vscode-graphql-syntax` | GraphQL |
+| `vscode-tailwindcss` | Tailwind CSS IntelliSense |
+| `vscode-solidity-language` | Solidity language support |
+| `hardhat-solidity` | Hardhat integration |
+| `prettier-vscode` | Code formatter |
+| `gitlens` | Git blame, history |
+| `indent-rainbow` | Indentation visualization |
+| `todo-tree` | TODO/FIXME tracking |
+| `vscode-versionlens` | Package version info |
+| `vsliveshare` | Live Share collaboration |
+| `terraform` | Terraform/HCL support |
+| `vscode-docker` | Docker integration |
+| `vscode-postgresql-client2` | PostgreSQL client |
+| `errorlens` | Inline error display |
+| `code-spell-checker` | Spell checking |
+| `vscode-todo-highlight` | TODO highlighting |
+
+### Development tools script
+
+A `coder_script` resource installs tools on first boot using smart caching (checks if already installed before downloading):
+
+- **Oh My Zsh** with Powerlevel10k theme, autosuggestions, syntax highlighting, and completions plugins
+- **PNPM** via the official install script
+- **Foundry** (forge, cast, anvil, chisel) via `foundryup`
+- **act** for running GitHub Actions locally
+- **GitHub CLI** with automatic authentication using Coder's external auth token
+
+### Docker container
+
+The workspace container is configured with:
+
+- A persistent home volume (`/home/coder`) that survives restarts
+- Docker socket mount (`/var/run/docker.sock`) for Docker-in-Docker
+- Health checks every 30 seconds
+- `host.docker.internal` hostname for host access
+- Labels for Coder workspace tracking
+
+## Dockerfile
+
+The base image (`infra/coder/template/Dockerfile`) starts from Ubuntu 24.04 and installs:
+
+```
+Base: ubuntu:24.04
+├── Docker CE + Compose + BuildX
+├── Build essentials (gcc, make, etc.)
+├── Git, htop, jq, nano, vim, wget, zsh
+├── PostgreSQL 16
+├── Python 3
+├── Fonts (Fira Code, Powerline)
+└── User: coder (UID 1000, docker group, passwordless sudo)
+```
+
+Image size is approximately 3.6 GB. Pre-configured shell aliases and PostgreSQL environment variables are baked into `.zshrc`.
+
+## Performance
+
+| Metric | Value |
+|---|---|
+| First boot | 3-5 minutes (installs Oh My Zsh, PNPM, Foundry, act) |
+| Subsequent boots | 30-60 seconds (services only) |
+| Idle RAM usage | ~500 MB |
+| Active development | 2-4 GB RAM, 10-50% CPU |
+
+## Security considerations
+
+The Docker socket mount (`/var/run/docker.sock`) gives workspace users full access to the host Docker daemon. This means:
+
+- Users can see and interact with other containers on the host
+- Users effectively have root-level Docker access
+
+This is acceptable for a single-user home lab. For multi-tenant environments, consider Docker authorization plugins or alternative isolation methods.
+
+## Customization
+
+### Adjusting resource limits
+
+Edit `main.tf` and update the workspace memory/CPU variables, then push the updated template:
+
+```bash
+coder templates push web3-dev-workspace
+```
+
+### Adding VS Code extensions
+
+Add extension IDs to the `extensions` list in the `code-server` module in `main.tf`.
+
+### Adding system packages
+
+Add packages to the `apt-get install` step in the Dockerfile, then rebuild:
+
+```bash
+coder templates push web3-dev-workspace
+```

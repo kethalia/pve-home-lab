@@ -1,0 +1,62 @@
+---
+title: Development Environment
+description: Coder cloud development workspaces with pre-configured tooling for Web3 and full-stack development.
+---
+
+## Overview
+
+[Coder](https://coder.com) provides cloud development environments that run in Docker containers on the home lab. Each workspace is a full Linux environment with VS Code, Node.js, Docker, and blockchain development tools — accessible from any device via a browser.
+
+## Why Coder?
+
+- **Remote access**: Develop from any device with a browser — laptop, tablet, or another machine
+- **Context-specific workspaces**: Spin up isolated environments per project
+- **Easy reset**: Destroy and recreate workspaces without losing your host setup
+- **Pre-configured tools**: PNPM, Node.js, Foundry, Oh My Zsh, and 19 VS Code extensions installed automatically
+
+## Architecture
+
+```
+┌────────────────────────────────────┐
+│  Coder Server (LXC container)     │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Workspace Container         │  │
+│  │                              │  │
+│  │  - VS Code Server            │  │
+│  │  - Node.js (18/20/22/24)     │  │
+│  │  - Docker (via socket mount) │  │
+│  │  - Foundry (Solidity tools)  │  │
+│  │  - ZSH + Oh My Zsh           │  │
+│  │  - PostgreSQL 16             │  │
+│  │  - OpenCode (AI coding)      │  │
+│  │  - File Browser              │  │
+│  └──────────┬───────────────────┘  │
+│             │ Docker socket mount  │
+│  ┌──────────┴───────────────────┐  │
+│  │  Host Docker Daemon          │  │
+│  └──────────────────────────────┘  │
+└────────────────────────────────────┘
+```
+
+## Quick start
+
+```bash
+# Install Coder
+curl -L https://coder.com/install.sh | sh
+
+# Push the template
+cd infra/coder/template
+coder templates push web3-dev-workspace
+
+# Create a workspace
+coder create --template web3-dev-workspace my-workspace
+
+# SSH in
+coder ssh my-workspace
+```
+
+## Sections
+
+- [Coder Setup](/docs/development/coder) — Installation and workspace management
+- [Template Deep-Dive](/docs/development/coder-template) — Terraform config, Dockerfile, extensions, and tools

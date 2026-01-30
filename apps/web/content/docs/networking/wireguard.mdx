@@ -1,0 +1,197 @@
+---
+title: WireGuard Setup
+description: Step-by-step WireGuard VPN tunnel and Nginx Proxy Manager configuration.
+---
+
+## Overview
+
+This guide sets up a WireGuard tunnel between a public VPS and your private home server, then configures Nginx Proxy Manager (NPM) to reverse-proxy traffic to internal services. Based on the [Pro Custodibus guide](https://www.procustodibus.com/blog/2022/09/wireguard-port-forward-from-internet/).
+
+## Prerequisites
+
+- A public VPS with a static IP (any cheap provider works — DigitalOcean, Hetzner, etc.)
+- Your home server running the lab services
+- A domain name with DNS management access
+- Root access on both servers
+
+## Step 1: Install WireGuard
+
+Install WireGuard on **both** the public VPS and home server:
+
+```bash
+apt update && apt install wireguard -y
+```
+
+For other distros, see the [WireGuard install page](https://www.wireguard.com/install/).
+
+## Step 2: Generate keys
+
+On **each** server, generate a WireGuard keypair:
+
+```bash
+wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+```
+
+You will need:
+- Public VPS: its private key and the home server's public key
+- Home server: its private key and the VPS's public key
+
+## Step 3: Configure the public VPS
+
+Create `/etc/wireguard/wg0.conf` on the VPS using `infra/wireguard/wg0-public-server.conf` as a template:
+
+```ini
+# local settings for the public server
+[Interface]
+PrivateKey = PUBLIC_SERVER_PRIVATE_KEY
+Address = 10.0.0.2
+ListenPort = 51822
+
+# packet forwarding
+PreUp = sysctl -w net.ipv4.ip_forward=1
+
+# port forwarding
+PreUp = iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to-destination 10.0.0.1:80
+PostDown = iptables -t nat -D PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to-destination 10.0.0.1:80
+PreUp = iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j DNAT --to-destination 10.0.0.1:443
+PostDown = iptables -t nat -D PREROUTING -i eth0 -p tcp --dport 443 -j DNAT --to-destination 10.0.0.1:443
+
+# packet masquerading
+PreUp = iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
+PostDown = iptables -t nat -D POSTROUTING -o wg0 -j MASQUERADE
+
+# remote settings for the private server
+[Peer]
+PublicKey = PRIVATE_SERVER_PUBLIC_KEY
+AllowedIPs = 10.0.0.1
+```
+
+Replace:
+- `PUBLIC_SERVER_PRIVATE_KEY` with the VPS's private key
+- `PRIVATE_SERVER_PUBLIC_KEY` with the home server's public key
+- `eth0` with the VPS's public network interface (check with `ip route | grep default`)
+
+### What the iptables rules do
+
+| Rule | Purpose |
+|---|---|
+| `PREROUTING DNAT :80 → 10.0.0.1:80` | Forwards HTTP traffic to home server |
+| `PREROUTING DNAT :443 → 10.0.0.1:443` | Forwards HTTPS traffic to home server |
+| `POSTROUTING MASQUERADE` | Rewrites source address so return traffic goes back through the tunnel |
+
+## Step 4: Configure the home server
+
+Create `/etc/wireguard/wg0.conf` on the home server using `infra/wireguard/wg0-private-server.conf` as a template:
+
+```ini
+# local settings for the private server
+[Interface]
+PrivateKey = PRIVATE_SERVER_PRIVATE_KEY
+Address = 10.0.0.1
+ListenPort = 51821
+
+# remote settings for the public server
+[Peer]
+PublicKey = PUBLIC_SERVER_PUBLIC_KEY
+Endpoint = PUBLIC_SERVER_IP_ADDRESS:51822
+AllowedIPs = 10.0.0.2
+PersistentKeepalive = 25
+```
+
+Replace:
+- `PRIVATE_SERVER_PRIVATE_KEY` with the home server's private key
+- `PUBLIC_SERVER_PUBLIC_KEY` with the VPS's public key
+- `PUBLIC_SERVER_IP_ADDRESS` with the VPS's public IP
+
+The `PersistentKeepalive = 25` ensures the tunnel stays active even when the home server is behind NAT.
+
+## Step 5: Start WireGuard
+
+On **both** servers, enable and start the WireGuard service:
+
+```bash
+systemctl enable --now wg-quick@wg0
+```
+
+Verify the tunnel is up:
+
+```bash
+wg show
+```
+
+Test connectivity from the VPS:
+
+```bash
+ping 10.0.0.1  # Should reach the home server
+```
+
+## Step 6: Deploy Nginx Proxy Manager
+
+### Option A: Proxmox LXC helper script
+
+The easiest way on Proxmox — run on the Proxmox host:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/nginxproxymanager.sh)"
+```
+
+### Option B: Docker
+
+Use the compose file from `infra/wireguard/docker-compose.yaml`:
+
+```yaml
+services:
+  npm:
+    image: jc21/nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+      - 81:81
+    volumes:
+      - /mnt/npm/data:/data
+      - /mnt/npm/letsencrypt:/etc/letsencrypt
+    environment:
+      DB_SQLITE_FILE: "/data/database.sqlite"
+```
+
+```bash
+mkdir -p /mnt/npm/{data,letsencrypt}
+docker compose up -d
+```
+
+### First login
+
+Access the NPM admin panel at `http://<home-server-ip>:81`.
+
+Default credentials:
+- **Email**: `admin@example.com`
+- **Password**: `changeme`
+
+Change these immediately after first login.
+
+## Step 7: Configure DNS and proxy hosts
+
+1. Point your domain's DNS A record at the **VPS public IP**
+2. In NPM, go to **Proxy Hosts > Add Proxy Host**
+3. For each service:
+
+| Domain | Forward to | Port | SSL |
+|---|---|---|---|
+| `jellyfin.yourdomain.com` | `<media-vm-ip>` | 8096 | Let's Encrypt |
+| `coder.yourdomain.com` | `<dev-lxc-ip>` | 3000 | Let's Encrypt |
+| `dokploy.yourdomain.com` | `<deploy-lxc-ip>` | 3000 | Let's Encrypt |
+
+NPM handles Let's Encrypt certificate issuance and renewal automatically.
+
+## Troubleshooting
+
+**WireGuard tunnel won't connect**: Check that the VPS's WireGuard port (51822) is open in its firewall. Verify keys are correct and the Endpoint IP is right.
+
+**Port forwarding not working**: Ensure `net.ipv4.ip_forward=1` is set on the VPS. Check that the `eth0` interface name in iptables rules matches your actual interface.
+
+**NPM can't reach services**: Verify the home server can reach the VM/LXC IPs. Check that the service is running on the expected port.
+
+**SSL certificate errors**: Ensure port 80 is forwarded (Let's Encrypt uses HTTP-01 challenge). Check that DNS is pointing at the VPS IP.
+
+**Tunnel drops intermittently**: The `PersistentKeepalive = 25` on the home server side should prevent this. If issues persist, check your ISP for UDP throttling.

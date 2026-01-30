@@ -1,0 +1,104 @@
+---
+title: Dokploy Setup
+description: Full setup guide for the Dokploy self-hosted PaaS — Docker Swarm, install script, Traefik, and service configuration.
+---
+
+## Overview
+
+Dokploy provides a web dashboard for deploying applications from Git repositories, Docker images, or Docker Compose files. It handles builds, deployments, SSL certificates, and monitoring — similar to Heroku or Vercel but entirely self-hosted.
+
+## Prerequisites
+
+- [Docker installed](/docs/getting-started/docker-installation)
+- Ports 80 and 443 available (nothing else running on them)
+- Root access
+
+## Docker Compose
+
+The full stack is defined in `infra/dokploy/docker-compose.yaml`:
+
+### Services
+
+| Service | Image | Purpose | Port |
+|---|---|---|---|
+| `dokploy-postgres` | `postgres:16` | Application database | Internal |
+| `dokploy-redis` | `redis:7` | Cache and job queue | Internal |
+| `dokploy` | `dokploy/dokploy:latest` | Main application | 3000 |
+| `dokploy-traefik` | `traefik:v3.1.2` | Reverse proxy, TLS | 80, 443 |
+
+All services run on the `dokploy-network` Docker overlay network and are constrained to the Swarm manager node.
+
+### Key configuration details
+
+- **Postgres**: Uses hardcoded credentials (`dokploy/dokploy`). Data persisted in `dokploy-postgres-database` volume.
+- **Redis**: Health check via `redis-cli ping`. Data in `redis-data-volume`.
+- **Dokploy**: Depends on Postgres and Redis being healthy. Mounts Docker socket and `/etc/dokploy` for persistent configuration.
+- **Traefik**: Exposes ports 80 (HTTP), 443 (TCP+UDP for HTTPS/HTTP3). Configuration stored in `/etc/dokploy/traefik/`.
+
+## Install script
+
+The install script (`infra/dokploy/install.sh`, 153 lines) automates the entire setup:
+
+### What it does
+
+1. **Validates environment**:
+   - Must be run as root
+   - Must be on Linux (not macOS, not inside a container)
+   - Ports 80 and 443 must be free
+
+2. **Installs Docker** (if not already installed):
+   ```bash
+   curl -sSL https://get.docker.com | sh
+   ```
+
+3. **Initializes Docker Swarm**:
+   - Auto-detects the server's public IP (tries IPv4 first, falls back to IPv6)
+   - Runs `docker swarm init --advertise-addr <ip>`
+
+4. **Creates networking**:
+   - Removes any existing `dokploy-network`
+   - Creates a new overlay network: `docker network create --driver overlay --attachable dokploy-network`
+
+5. **Sets up directories**:
+   - Creates `/etc/dokploy` with `chmod 777`
+
+6. **Starts services**:
+   - Exports `advertise_addr` and runs `docker compose up -d`
+
+### Updating Dokploy
+
+```bash
+cd /app && sh install.sh update
+```
+
+This pulls the latest Dokploy image and updates the Swarm service.
+
+## Post-install configuration
+
+1. Open `http://<server-ip>:3000` in your browser
+2. Create an admin account on first visit
+3. Configure your domain under **Settings > Server**
+4. Set up Traefik for automatic SSL:
+   - Go to **Settings > Certificates**
+   - Add a Let's Encrypt provider
+   - Configure your domain
+5. Deploy your first application:
+   - Go to **Projects > New Project**
+   - Choose from Git repository, Docker image, or Docker Compose
+   - Configure build settings and environment variables
+   - Deploy
+
+## Troubleshooting
+
+**Port 80/443 already in use**: Stop whatever is using those ports before running the install script. Check with `ss -tulnp | grep ':80\|:443'`.
+
+**Swarm init fails**: The script auto-detects your public IP. If detection fails, set it manually: `export ADVERTISE_ADDR=<your-ip>` before running the script.
+
+**Dokploy container keeps restarting**: Check that Postgres and Redis are healthy with `docker compose ps`. Look at logs with `docker compose logs dokploy`.
+
+**LXC-specific issues**: The standard `curl | sh` installer may fail in LXC containers due to network namespace restrictions. Use the [manual installation](/docs/deployment) method instead.
+
+## External resources
+
+- [Dokploy documentation](https://docs.dokploy.com)
+- [Traefik v3 documentation](https://doc.traefik.io/traefik/)

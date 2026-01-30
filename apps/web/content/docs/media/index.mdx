@@ -1,0 +1,74 @@
+---
+title: Media Server
+description: Jellyfin media server with VPN-routed automated downloading via the arr-stack.
+---
+
+## Overview
+
+The media stack provides a complete self-hosted media server with automated content management. All download traffic is routed through a VPN for privacy, while Jellyfin handles playback with GPU-accelerated transcoding.
+
+## Architecture
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Media VM (NVIDIA GPU for transcoding)                 │
+│                                                        │
+│  ┌─────────────────────────────────────┐               │
+│  │ Gluetun VPN Gateway                 │               │
+│  │ (ProtonVPN / WireGuard)             │               │
+│  │                                     │               │
+│  │  ┌──────────────┐ ┌─────────────┐  │               │
+│  │  │ qBittorrent  │ │ Prowlarr    │  │               │
+│  │  │ :5080        │ │ :9696       │  │               │
+│  │  │ (Downloads)  │ │ (Indexers)  │  │               │
+│  │  └──────────────┘ └─────────────┘  │               │
+│  └─────────────────────────────────────┘               │
+│                                                        │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
+│  │ Radarr   │ │ Sonarr   │ │ Bazarr   │ │ Jellyfin │  │
+│  │ :7878    │ │ :8989    │ │ :6767    │ │ :8096    │  │
+│  │ (Movies) │ │ (TV)     │ │ (Subs)   │ │ (Player) │  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
+│                                                        │
+│  Docker network: jellyfin_network (172.50.0.0/16)      │
+└────────────────────────────────────────────────────────┘
+```
+
+### Service roles
+
+| Service | Role | Network |
+|---|---|---|
+| **Gluetun** | VPN gateway — all download traffic routes through this | jellyfin_network |
+| **qBittorrent** | Torrent client, runs behind VPN (`network_mode: service:vpn`) | Via Gluetun |
+| **Prowlarr** | Indexer manager, runs behind VPN | Via Gluetun |
+| **Radarr** | Movie management — searches, grabs, renames | jellyfin_network |
+| **Sonarr** | TV show management — same as Radarr but for series | jellyfin_network |
+| **Bazarr** | Subtitle management — auto-downloads subtitles | jellyfin_network |
+| **Jellyfin** | Media player with GPU transcoding | Host network |
+
+### Data flow
+
+1. **Prowlarr** connects to torrent indexer sites and provides search results to Radarr/Sonarr
+2. **Radarr/Sonarr** monitor wanted media and send download requests to qBittorrent
+3. **qBittorrent** downloads content through the Gluetun VPN tunnel
+4. **Radarr/Sonarr** move and rename completed downloads into the media library
+5. **Bazarr** detects new media and downloads matching subtitles
+6. **Jellyfin** serves the media library to clients with GPU-accelerated transcoding
+
+## Quick start
+
+```bash
+cd infra/jellyfin
+
+# Create the Docker network (required, one-time)
+sudo docker network create --subnet 172.50.0.0/16 jellyfin_network
+
+# Create .env from example
+cp .env.example .env
+nano .env  # Set ROOT_DIR, VPN credentials, static IPs
+
+# Start all services
+docker compose up -d
+```
+
+For the full setup guide, see [Jellyfin Stack Setup](/docs/media/jellyfin).

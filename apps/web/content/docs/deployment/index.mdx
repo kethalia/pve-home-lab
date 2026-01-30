@@ -1,0 +1,62 @@
+---
+title: Deployment
+description: Dokploy self-hosted PaaS with Docker Swarm, Traefik reverse proxy, Postgres, and Redis.
+---
+
+## Overview
+
+[Dokploy](https://dokploy.com) is a free, self-hostable alternative to platforms like Heroku, Vercel, and Netlify. It runs on Docker Swarm with Traefik as the reverse proxy, backed by Postgres and Redis.
+
+In this home lab, Dokploy runs on a dedicated LXC container and handles application deployments with automatic TLS via Traefik.
+
+## Architecture
+
+```
+┌──────────────────────────────────────┐
+│  Dokploy LXC Container              │
+│                                      │
+│  ┌──────────┐    ┌────────────────┐  │
+│  │ Traefik  │◀──▶│ Dokploy        │  │
+│  │ :80/:443 │    │ :3000          │  │
+│  └──────────┘    └────────┬───────┘  │
+│                           │          │
+│  ┌──────────┐    ┌────────┴───────┐  │
+│  │ Redis 7  │    │ Postgres 16    │  │
+│  └──────────┘    └────────────────┘  │
+│                                      │
+│  Docker Swarm (overlay network)      │
+└──────────────────────────────────────┘
+```
+
+All services communicate over a Docker overlay network (`dokploy-network`) and run as Swarm services constrained to the manager node.
+
+## Quick start
+
+### Standard installation
+
+```bash
+curl -sSL https://dokploy.com/install.sh | sh
+```
+
+This installs Docker (if needed), initializes a Swarm, creates the overlay network, and starts all services.
+
+### Proxmox LXC installation
+
+The standard install script has issues inside LXC containers. Use the manual approach instead:
+
+```bash
+# Create the app directory
+mkdir /app
+
+# Copy the compose file and install script
+# (from infra/dokploy/ in this repository)
+cp docker-compose.yaml /app/
+cp install.sh /app/
+
+# Run the installer
+cd /app && sh install.sh
+```
+
+After installation, access Dokploy at `http://<lxc-ip>:3000`.
+
+For detailed setup, see the [Dokploy setup guide](/docs/deployment/dokploy).
