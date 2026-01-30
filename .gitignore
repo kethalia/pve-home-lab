@@ -13,6 +13,9 @@ out/
 dist/
 *.tsbuildinfo
 
+# fumadocs generated
+.source/
+
 # env files
 .env
 .env.local
