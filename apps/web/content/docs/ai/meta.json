@@ -1,0 +1,9 @@
+{
+  "pages": [
+    "index",
+    "ollama",
+    "open-webui",
+    "kokoro",
+    "comfyui"
+  ]
+}

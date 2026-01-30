@@ -1,0 +1,75 @@
+---
+title: Open WebUI
+description: Chat interface for interacting with LLMs via Ollama, with Kokoro text-to-speech integration.
+---
+
+## Overview
+
+[Open WebUI](https://github.com/open-webui/open-webui) provides a ChatGPT-like interface for interacting with local LLMs served by Ollama. It also integrates with Kokoro for text-to-speech output.
+
+## Docker Compose
+
+From the main stack (`infra/ai/docker-compose.yaml`):
+
+```yaml
+open-webui:
+  image: ghcr.io/open-webui/open-webui:v0.6.30
+  restart: unless-stopped
+  depends_on:
+    - ollama
+    - kokoro-web
+  ports:
+    - ${OPEN_WEBUI_PORT:-8080}:8080
+  volumes:
+    - ${OPEN_WEBUI_DATA_DIR-/data/open-webui}:/app/backend/data
+  environment:
+    - WEBUI_SECRET_KEY
+    - OLLAMA_BASE_URL
+    - AUDIO_TTS_OPENAI_API_BASE_URL
+    - AUDIO_TTS_OPENAI_API_KEY
+    - AUDIO_TTS_ENGINE
+    - AUDIO_TTS_MODEL
+    - AUDIO_TTS_VOICE
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPEN_WEBUI_PORT` | `8080` | Port for the web UI |
+| `WEBUI_SECRET_KEY` | — | Secret key for session encryption |
+| `OPEN_WEBUI_DATA_DIR` | `/data/open-webui` | Persistent storage for user data, chat history |
+| `OLLAMA_BASE_URL` | `http://ollama:11434` | URL of the Ollama service (uses Docker service name) |
+| `AUDIO_TTS_OPENAI_API_BASE_URL` | `http://kokoro-web:3000/api/v1` | Kokoro TTS endpoint |
+| `AUDIO_TTS_OPENAI_API_KEY` | `${KW_SECRET_API_KEY}` | API key for Kokoro (must match Kokoro's key) |
+| `AUDIO_TTS_ENGINE` | `openai` | TTS engine type (Kokoro uses OpenAI-compatible API) |
+| `AUDIO_TTS_MODEL` | `model` | TTS model name |
+| `AUDIO_TTS_VOICE` | `af_heart` | TTS voice preset |
+
+## Service dependencies
+
+Open WebUI depends on both Ollama and Kokoro being available:
+
+- **Ollama** (`http://ollama:11434`): Handles all LLM inference. Open WebUI sends chat messages to Ollama and streams responses back.
+- **Kokoro** (`http://kokoro-web:3000/api/v1`): Provides text-to-speech. When enabled, users can hear AI responses read aloud.
+
+Both connections use Docker's internal network — no ports need to be exposed between services.
+
+## First-time setup
+
+1. Open `http://<vm-ip>:8080` in your browser
+2. Create an admin account on first visit
+3. Open WebUI automatically connects to Ollama — you should see available models in the model selector
+4. To use TTS, go to **Settings > Audio** and verify the TTS configuration matches the environment variables above
+
+## Data persistence
+
+All user data (accounts, chat history, settings) is stored in `OPEN_WEBUI_DATA_DIR`. Back up this directory to preserve your data.
+
+## Troubleshooting
+
+**"No models available"**: Ensure Ollama is running and has at least one model pulled. Check with `docker compose exec ollama ollama list`.
+
+**TTS not working**: Verify that Kokoro is running (`docker compose ps kokoro-web`) and that the `AUDIO_TTS_OPENAI_API_KEY` matches `KW_SECRET_API_KEY` in your `.env`.
+
+**Slow initial load**: Open WebUI loads model metadata from Ollama on startup. Large model lists may take a few seconds.

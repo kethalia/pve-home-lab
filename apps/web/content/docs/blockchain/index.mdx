@@ -1,0 +1,74 @@
+---
+title: Blockchain
+description: LUKSO full node with Geth execution client, Lighthouse consensus client, and Grafana monitoring.
+---
+
+## Overview
+
+[LUKSO](https://lukso.network) is an EVM-compatible blockchain focused on digital identity and creative economies. This setup runs a full LUKSO mainnet node using Docker, with:
+
+- **Geth** as the execution client (processes transactions, maintains state)
+- **Lighthouse** as the consensus client (handles proof-of-stake, block proposals)
+- **Prometheus + Grafana** for monitoring
+
+## Architecture
+
+```
+┌───────────────────────────────────────────────┐
+│  Blockchain VM                                │
+│                                               │
+│  ┌────────────┐        ┌──────────────┐       │
+│  │ Geth       │◀──JWT──│ Lighthouse   │       │
+│  │ (Execution)│        │ (Consensus)  │       │
+│  │ :8545 RPC  │        │ :5052 Beacon │       │
+│  │ :30303 P2P │        │ :9000 P2P    │       │
+│  └─────┬──────┘        └──────┬───────┘       │
+│        │ metrics               │ metrics      │
+│  ┌─────┴───────────────────────┴──────┐       │
+│  │ Prometheus :9090                    │       │
+│  └─────────────────┬──────────────────┘       │
+│                    │                          │
+│  ┌─────────────────┴──────────────────┐       │
+│  │ Grafana :3000                       │       │
+│  │ (LUKSO Node dashboard)              │       │
+│  └─────────────────────────────────────┘       │
+└───────────────────────────────────────────────┘
+```
+
+## Key features
+
+- **Snap sync**: Syncs in hours, not weeks (~60 GB storage vs 1.8 TB/year for archive)
+- **Auto-initialization**: Genesis init runs automatically on first start
+- **Health checks**: Lighthouse waits for Geth to be ready before starting
+- **Graceful shutdown**: 5-minute stop grace period prevents database corruption
+- **Pre-configured monitoring**: Grafana dashboard with Prometheus metrics auto-provisioned
+
+## Requirements
+
+| Resource | Minimum |
+|---|---|
+| CPU | 4+ cores |
+| RAM | 16+ GB |
+| Storage | 100 GB+ SSD (NVMe recommended) |
+| Network | Stable connection, ports 30303 and 9000 open |
+| Software | Docker & Docker Compose v2 |
+
+## Quick start
+
+```bash
+cd infra/lukso-node
+
+# Run setup (downloads genesis.ssz, generates JWT, creates dirs)
+./scripts/setup.sh
+
+# Configure
+nano .env  # Set DATA_DIR and GRAFANA_ADMIN_PASSWORD
+
+# Start
+docker compose up -d
+
+# Watch logs
+docker compose logs -f
+```
+
+For the full setup and operations guide, see [LUKSO Node Setup](/docs/blockchain/lukso-node).

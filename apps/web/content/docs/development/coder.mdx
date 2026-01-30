@@ -1,0 +1,119 @@
+---
+title: Coder Setup
+description: Install Coder, configure workspaces, and manage cloud development environments.
+---
+
+## Overview
+
+Coder runs as a service on an LXC container and manages Docker-based workspaces. Each workspace is a container with a persistent home volume, pre-configured tools, and VS Code running in the browser.
+
+## Prerequisites
+
+- Docker installed on the host ([installation guide](/docs/getting-started/docker-installation))
+- A domain pointed at the host (optional, for HTTPS access)
+
+## Installation
+
+```bash
+curl -L https://coder.com/install.sh | sh
+```
+
+For detailed installation options, see the [Coder install docs](https://coder.com/docs/install).
+
+## Creating a workspace
+
+### Via CLI
+
+```bash
+# Push the template (one-time)
+cd infra/coder/template
+coder templates push web3-dev-workspace
+
+# Create workspace
+coder create --template web3-dev-workspace my-workspace
+
+# Connect via SSH
+coder ssh my-workspace
+```
+
+### Via Web UI
+
+1. Go to your Coder dashboard
+2. Navigate to **Templates** and select `web3-dev-workspace`
+3. Click **Create Workspace**
+4. Optionally set a dotfiles repository URL
+5. Wait for the workspace to build (3-5 minutes on first boot, 30-60 seconds on subsequent starts)
+
+## Workspace features
+
+Once inside a workspace, you have access to:
+
+| Tool | Details |
+|---|---|
+| VS Code Server | 19 pre-installed extensions, accessible in browser |
+| Node.js | Versions 18, 20, 22, 24 (default: 24) via version switcher |
+| PNPM | Latest version, installed on first boot |
+| Docker | Full access via host socket mount |
+| Foundry | forge, cast, anvil, chisel for Solidity development |
+| act | Run GitHub Actions locally |
+| GitHub CLI | Auto-authenticated via Coder external auth |
+| PostgreSQL 16 | Local database (user: coder, db: coder) |
+| ZSH | Oh My Zsh with Powerlevel10k and plugins |
+| OpenCode | AI coding assistant with web UI |
+| File Browser | Web-based file manager |
+
+## Shell aliases
+
+Pre-configured aliases available in ZSH:
+
+```bash
+d           # docker
+dc          # docker-compose
+g           # git
+gs          # git status
+gp          # git pull
+gc          # git commit
+gco         # git checkout
+ll          # ls -lah
+k           # kubectl
+```
+
+Git aliases:
+
+```bash
+git st      # status
+git co      # checkout
+git br      # branch
+git cm      # commit
+git lg      # pretty log graph
+```
+
+## Resource limits
+
+Default workspace resources:
+
+| Resource | Default | Configurable |
+|---|---|---|
+| Memory | 8 GB | Yes, via `main.tf` |
+| CPU | 4 cores | Yes, via `main.tf` |
+| Swap | 16 GB | Automatic (2x memory) |
+| Home volume | Persistent | Survives workspace restarts |
+
+## Workspace monitoring
+
+Coder tracks workspace metrics automatically:
+
+- CPU and RAM usage (workspace and host)
+- Home disk usage
+- Host load average and swap
+- Workspace size on disk
+
+These are visible in the Coder dashboard under each workspace.
+
+## Troubleshooting
+
+**Docker not accessible inside workspace**: Check that `/var/run/docker.sock` is mounted. Run `docker info` to verify.
+
+**Tools not installing on first boot**: Check the startup script logs in the Coder UI under **Templates > Logs**. Network issues can prevent downloads.
+
+**Workspace won't start**: Check `coder server logs` and `docker logs <container>` for errors.

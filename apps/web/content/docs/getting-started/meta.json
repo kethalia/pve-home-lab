@@ -1,0 +1,8 @@
+{
+  "pages": [
+    "index",
+    "proxmox-setup",
+    "docker-installation",
+    "networking"
+  ]
+}

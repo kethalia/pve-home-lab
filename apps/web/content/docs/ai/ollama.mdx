@@ -1,0 +1,115 @@
+---
+title: Ollama
+description: Self-hosted LLM inference engine with NVIDIA GPU acceleration.
+---
+
+## Overview
+
+[Ollama](https://ollama.ai) is an LLM inference engine that runs large language models locally. In this stack it serves as the backend for Open WebUI, handling all model loading and inference on the GPU.
+
+## Docker Compose
+
+The main stack (`infra/ai/docker-compose.yaml`) includes Ollama as part of the all-in-one deployment:
+
+```yaml
+ollama:
+  image: ollama/ollama:0.11.11
+  restart: unless-stopped
+  ports:
+    - ${OLLAMA_PORT:-11434}:11434
+  volumes:
+    - ${OLLAMA_DATA_DIR-/data/ollama}:/root/.ollama
+  environment:
+    - OLLAMA_FLASH_ATTENTION
+    - OLLAMA_KV_CACHE_TYPE
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities:
+              - gpu
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OLLAMA_PORT` | `11434` | Port for the Ollama API |
+| `OLLAMA_DATA_DIR` | `/data/ollama` | Persistent storage for models and data |
+| `OLLAMA_FLASH_ATTENTION` | `1` | Enable flash attention for faster inference |
+| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | KV cache quantization (`q4_0` or `q8_0`). Lower uses less VRAM but reduces quality slightly |
+
+## Standalone deployment
+
+If you want to run Ollama on a separate machine or with different GPU allocation, use the standalone compose file at `infra/ai/ollama/docker-compose.yaml`:
+
+```yaml
+services:
+  ollama:
+    image: ollama/ollama:0.11.11
+    restart: unless-stopped
+    ports:
+      - ${OLLAMA_PORT:-11434}:11434
+    volumes:
+      - ${OLLAMA_DATA_DIR-/mnt/ollama/data}:/root/.ollama
+      - ${OLLAMA_MODELS_DIR-/mnt/ollama/models}:/root/.ollama/models
+    environment:
+      - OLLAMA_FLASH_ATTENTION
+      - OLLAMA_KV_CACHE_TYPE
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+```
+
+Key differences from the main stack:
+- Uses only **1 GPU** instead of all
+- Separate mount points for data and models (`OLLAMA_DATA_DIR` and `OLLAMA_MODELS_DIR`)
+
+## Model management
+
+Once Ollama is running, pull and manage models via the API or CLI:
+
+```bash
+# Pull a model
+docker compose exec ollama ollama pull llama3.1
+
+# List installed models
+docker compose exec ollama ollama list
+
+# Run a model directly
+docker compose exec ollama ollama run llama3.1 "Hello, world"
+
+# Remove a model
+docker compose exec ollama ollama rm llama3.1
+```
+
+## API usage
+
+Ollama exposes an OpenAI-compatible API at `http://localhost:11434`:
+
+```bash
+# Chat completion
+curl http://localhost:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama3.1",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+
+# List models
+curl http://localhost:11434/api/tags
+```
+
+## Troubleshooting
+
+**Out of VRAM**: Use a smaller model or enable `OLLAMA_KV_CACHE_TYPE=q4_0` to reduce VRAM usage at a small quality cost.
+
+**Slow inference**: Ensure `OLLAMA_FLASH_ATTENTION=1` is set. Check that the GPU is being used with `nvidia-smi`.
+
+**Model download fails**: Check disk space at `OLLAMA_DATA_DIR`. Large models (70B+) require 40+ GB of storage.

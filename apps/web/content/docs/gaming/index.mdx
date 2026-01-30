@@ -1,0 +1,53 @@
+---
+title: Cloud Gaming
+description: Sunshine game streaming server with Steam, using NVIDIA GPU passthrough and Moonlight clients.
+---
+
+## Overview
+
+The cloud gaming setup uses [Sunshine](https://github.com/LizardByte/Sunshine) (an open-source game streaming server) combined with Steam, running in a Docker container with full NVIDIA GPU access. Connect from any device using the [Moonlight](https://moonlight-stream.org/) client to play games streamed from the home lab.
+
+## Architecture
+
+```
+┌───────────────────────────────────────┐
+│  Gaming VM (NVIDIA GPU passthrough)   │
+│                                       │
+│  ┌─────────────────────────────────┐  │
+│  │  Sunshine Container             │  │
+│  │  (lizardbyte/sunshine +         │  │
+│  │   steam-installer)              │  │
+│  │                                 │  │
+│  │  TCP: 47984-47990, 48010       │  │
+│  │  UDP: 47998-48000              │  │
+│  │                                 │  │
+│  │  /mnt/steam/data  → Steam      │  │
+│  │  /mnt/games       → Game files │  │
+│  └─────────────────────────────────┘  │
+│                                       │
+│  NVIDIA GPU (5 device mappings)       │
+└───────────────────────────────────────┘
+         │
+         │ Moonlight protocol
+         ▼
+    ┌──────────┐
+    │  Client  │  (PC, phone, TV, etc.)
+    │ Moonlight│
+    └──────────┘
+```
+
+## Quick start
+
+```bash
+cd infra/gaming
+
+# Build and start the container
+docker compose up -d
+
+# Check that it's running
+docker compose ps
+```
+
+Sunshine's web UI is available at `https://<vm-ip>:47990` for initial configuration.
+
+For the full setup guide, see [Sunshine + Steam Setup](/docs/gaming/sunshine-steam).

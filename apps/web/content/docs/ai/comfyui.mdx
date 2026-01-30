@@ -1,0 +1,112 @@
+---
+title: ComfyUI
+description: Node-based image generation interface running Stable Diffusion on the GPU.
+---
+
+## Overview
+
+[ComfyUI](https://github.com/comfyanonymous/ComfyUI) is a node-based interface for Stable Diffusion and other image generation models. It runs as a custom-built Docker container with GPU acceleration.
+
+## Docker Compose
+
+From `infra/ai/docker-compose.yaml`:
+
+```yaml
+comfy-ui:
+  build: ./comfy-ui
+  restart: unless-stopped
+  ports:
+    - ${COMFY_UI_PORT:-8188}:8188
+  volumes:
+    - ${COMFY_UI_DATA_DIR-/data/comfy-ui}/models:/ComfyUI/models
+    - ${COMFY_UI_DATA_DIR-/data/comfy-ui}/input:/ComfyUI/input
+    - ${COMFY_UI_DATA_DIR-/data/comfy-ui}/output:/ComfyUI/output
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities:
+              - gpu
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `COMFY_UI_PORT` | `8188` | Port for the ComfyUI web interface |
+| `COMFY_UI_DATA_DIR` | `/data/comfy-ui` | Base directory for models, inputs, and outputs |
+
+## Custom Dockerfile
+
+ComfyUI uses a custom Docker image built from `infra/ai/comfy-ui/Dockerfile`:
+
+```dockerfile
+FROM debian:12
+
+RUN apt-get update \
+    && apt-get upgrade --yes --no-install-recommends --no-install-suggests \
+    && apt-get install --yes --no-install-recommends --no-install-suggests \
+        git python3 python3-pip python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 8188
+
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git
+WORKDIR /ComfyUI
+
+COPY start.sh start.sh
+RUN chmod +x start.sh
+
+RUN python3 -m venv comfy-ui
+RUN . ./comfy-ui/bin/activate \
+    && pip install torch torchvision torchaudio \
+       --extra-index-url https://download.pytorch.org/whl/cu129 \
+    && pip install -r requirements.txt
+
+CMD ["bash", "start.sh"]
+```
+
+The build:
+1. Starts from Debian 12
+2. Clones the ComfyUI repository from GitHub
+3. Creates a Python virtual environment
+4. Installs PyTorch with CUDA 12.9 support and ComfyUI's requirements
+5. Runs `start.sh`, which activates the venv and starts ComfyUI with `--listen`
+
+## Volume mounts
+
+Three subdirectories are mounted for persistence:
+
+| Mount | Container path | Purpose |
+|---|---|---|
+| `models/` | `/ComfyUI/models` | Stable Diffusion checkpoints, LoRAs, VAEs, etc. |
+| `input/` | `/ComfyUI/input` | Input images for img2img workflows |
+| `output/` | `/ComfyUI/output` | Generated images |
+
+Download model checkpoints into the `models/` directory. ComfyUI will automatically detect them.
+
+## Usage
+
+1. Open `http://<vm-ip>:8188` in your browser
+2. The node-based editor lets you build image generation workflows visually
+3. Load a checkpoint, connect text prompts, configure samplers, and click **Queue Prompt**
+4. Generated images appear in the output panel and are saved to the `output/` directory
+
+## Building the image
+
+The first `docker compose up -d` in the `infra/ai` directory will build the image automatically. To rebuild after changes:
+
+```bash
+docker compose build comfy-ui
+docker compose up -d comfy-ui
+```
+
+## Troubleshooting
+
+**Build fails on pip install**: Check that the NVIDIA drivers on the host support CUDA 12.9. Run `nvidia-smi` to verify the CUDA version.
+
+**Out of VRAM**: Use smaller model checkpoints (SD 1.5 vs SDXL) or reduce image resolution. ComfyUI shares the GPU with Ollama and Kokoro.
+
+**Models not showing up**: Ensure models are placed in the correct subdirectory under `models/` (e.g., `models/checkpoints/` for SD checkpoints).

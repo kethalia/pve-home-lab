@@ -1,0 +1,122 @@
+---
+title: Proxmox VE Setup
+description: Install and configure Proxmox VE as the hypervisor for your home lab.
+---
+
+## Overview
+
+[Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview) is a free, open-source server virtualization platform based on Debian. It supports both KVM virtual machines and LXC containers, managed through a web UI.
+
+## Prerequisites
+
+- A dedicated x86_64 server or workstation
+- USB drive (8 GB+) for the installer
+- Monitor and keyboard for initial setup
+- Network connection (ethernet)
+
+## Installation
+
+1. Download the Proxmox VE ISO from [proxmox.com/downloads](https://www.proxmox.com/en/downloads)
+2. Flash it to a USB drive using [Etcher](https://etcher.balena.io/) or `dd`
+3. Boot from the USB drive and follow the installer:
+   - Select the target disk for Proxmox (this will be wiped)
+   - Set your timezone and locale
+   - Set a root password and admin email
+   - Configure the management network interface (static IP recommended)
+4. After installation, access the web UI at `https://<server-ip>:8006`
+
+## Post-install configuration
+
+### Remove subscription nag
+
+Proxmox shows a subscription notice on login. To remove it for home use:
+
+```bash
+sed -Ezi.bak "s/(Ext.Msg.show\(\{[^}]+\})/void(0)/" \
+  /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+systemctl restart pveproxy
+```
+
+### Enable community repository
+
+Replace the enterprise repo (requires a subscription) with the no-subscription repo:
+
+```bash
+# Disable enterprise repo
+echo '# deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise' \
+  > /etc/apt/sources.list.d/pve-enterprise.list
+
+# Enable no-subscription repo
+echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' \
+  > /etc/apt/sources.list.d/pve-no-subscription.list
+
+apt update && apt dist-upgrade -y
+```
+
+### GPU passthrough (IOMMU)
+
+Several workloads (AI, media, gaming) require passing an NVIDIA GPU through to a VM. This requires IOMMU support.
+
+1. Enable IOMMU in BIOS (Intel VT-d or AMD-Vi)
+
+2. Edit GRUB:
+
+```bash
+nano /etc/default/grub
+```
+
+For Intel:
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt"
+```
+
+For AMD:
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet amd_iommu=on iommu=pt"
+```
+
+3. Update GRUB and add VFIO modules:
+
+```bash
+update-grub
+
+echo -e "vfio\nvfio_iommu_type1\nvfio_pci\nvfio_virqfd" >> /etc/modules
+update-initramfs -u -k all
+reboot
+```
+
+4. After reboot, verify IOMMU is active:
+
+```bash
+dmesg | grep -e DMAR -e IOMMU
+```
+
+5. Identify your GPU's PCI IDs and add them to the VFIO config. See the [Proxmox PCI Passthrough docs](https://pve.proxmox.com/wiki/PCI_Passthrough) for detailed steps.
+
+## Creating VMs and LXC containers
+
+### Virtual machines (VMs)
+
+Use VMs for workloads that need GPU passthrough or full OS isolation:
+
+- **AI VM**: Ubuntu 24.04, GPU passthrough, 16+ GB RAM
+- **Media VM**: Ubuntu 24.04, GPU passthrough, 8+ GB RAM, large data disk
+- **Gaming VM**: Ubuntu 24.04, GPU passthrough, 16+ GB RAM
+- **Blockchain VM**: Ubuntu 24.04, 16+ GB RAM, 100+ GB SSD
+
+### LXC containers
+
+Use containers for lightweight workloads that don't need a full kernel:
+
+- **Deployment LXC**: Debian 12, 4 GB RAM, Docker installed
+- **Development LXC**: Ubuntu 24.04, 8 GB RAM, Docker installed
+
+LXC containers are more resource-efficient than VMs but cannot do GPU passthrough (without additional configuration).
+
+## Troubleshooting
+
+**IOMMU groups are too large**: Some motherboards place multiple devices in the same IOMMU group. You may need an ACS override patch or a different motherboard.
+
+**GPU passthrough black screen**: Ensure you have blacklisted the nouveau driver and bound the GPU to vfio-pci before the VM starts.
+
+**Web UI unreachable**: Check that the management IP is correct with `ip addr` and that port 8006 is not blocked by a firewall.

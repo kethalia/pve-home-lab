@@ -1,0 +1,83 @@
+---
+title: Kokoro TTS
+description: GPU-accelerated text-to-speech service with OpenAI-compatible API.
+---
+
+## Overview
+
+[Kokoro](https://github.com/eduardolat/kokoro-web) is a text-to-speech service that runs on the GPU. In this stack, it integrates with Open WebUI to read AI responses aloud. It exposes an OpenAI-compatible API, making it a drop-in replacement for the OpenAI TTS endpoint.
+
+## Docker Compose (main stack)
+
+From `infra/ai/docker-compose.yaml`:
+
+```yaml
+kokoro-web:
+  image: ghcr.io/eduardolat/kokoro-web:latest
+  restart: unless-stopped
+  ports:
+    - ${KOKORO_PORT:-3000}:3000
+  volumes:
+    - ${KOKORO_DATA_DIR-/data/kokoro}:/kokoro/cache
+  environment:
+    - KW_SECRET_API_KEY
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities:
+              - gpu
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `KOKORO_PORT` | `3000` | Port for the Kokoro API |
+| `KOKORO_DATA_DIR` | `/data/kokoro` | Cache directory for generated audio |
+| `KW_SECRET_API_KEY` | — | API key (must match `AUDIO_TTS_OPENAI_API_KEY` in Open WebUI) |
+
+## Standalone deployment
+
+A standalone Kokoro deployment is available at `infra/ai/kokoro/docker-compose.yaml`, using a different image (FastAPI-based):
+
+```yaml
+services:
+  kokoro-fastapi-gpu:
+    image: ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.1
+    restart: unless-stopped
+    ports:
+      - ${KOKORO_PORT:-3000}:8880
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+```
+
+This variant uses `kokoro-fastapi-gpu` instead of `kokoro-web` and maps external port to internal port 8880. It uses a single GPU.
+
+## API usage
+
+Kokoro exposes an OpenAI-compatible TTS endpoint:
+
+```bash
+curl http://localhost:3000/api/v1/audio/speech \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "Hello, this is a test.",
+    "voice": "af_heart",
+    "model": "model"
+  }' --output speech.mp3
+```
+
+## Troubleshooting
+
+**No audio output in Open WebUI**: Check that `KW_SECRET_API_KEY` in your `.env` matches what Open WebUI sends as `AUDIO_TTS_OPENAI_API_KEY`. Both must be the same value.
+
+**Kokoro container exits immediately**: Ensure the NVIDIA Container Toolkit is installed and the GPU is accessible. Run `docker compose logs kokoro-web` for error details.
