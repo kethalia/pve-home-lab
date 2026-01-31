@@ -31,7 +31,13 @@ _log() {
   local level="$1"; shift
   local ts
   ts="$(date '+%Y-%m-%d %H:%M:%S')"
-  printf '[%s] [%-5s] %s\n' "$ts" "$level" "$*" | tee -a "${CM_LOG_DIR}/sync.log"
+  local msg
+  msg="$(printf '[%s] [%-5s] %s\n' "$ts" "$level" "$*")"
+  echo "$msg"
+  # Append to log file only if directory exists (may not during early failures)
+  if [ -d "$CM_LOG_DIR" ]; then
+    echo "$msg" >> "${CM_LOG_DIR}/sync.log" 2>/dev/null || true
+  fi
 }
 log_info()  { _log INFO  "$@"; }
 log_warn()  { _log WARN  "$@"; }

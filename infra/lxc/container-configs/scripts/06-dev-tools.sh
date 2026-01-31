@@ -39,7 +39,6 @@ if is_installed act; then
   log_info "act already installed."
 else
   log_info "Installing act..."
-  local arch
   arch="$(uname -m)"
   case "$arch" in
     x86_64)  arch="x86_64" ;;

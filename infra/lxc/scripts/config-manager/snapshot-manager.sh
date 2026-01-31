@@ -169,7 +169,13 @@ snapshot_rollback() {
       ;;
     lvm)
       log_info "Rolling back LVM snapshot: ${target}"
-      lvconvert --merge "/dev/*/${target}" 2>&1
+      local snap_vg
+      snap_vg="$(lvs --noheadings -o vg_name -S "lv_name=${target}" 2>/dev/null | tr -d ' ')"
+      if [ -z "$snap_vg" ]; then
+        log_error "LVM snapshot not found: ${target}"
+        return 1
+      fi
+      lvconvert --merge "/dev/${snap_vg}/${target}" 2>&1
       log_ok "LVM rollback scheduled. Reboot required."
       ;;
     btrfs)
@@ -231,10 +237,11 @@ snapshot_cleanup() {
       local max_keep=$(( retention_days ))
       if [ "$count" -gt "$max_keep" ]; then
         local to_remove=$(( count - max_keep ))
-        lvs --noheadings -o lv_name 2>/dev/null | grep "config-manager-" | head -n "$to_remove" | while read -r lv; do
+        lvs --noheadings -o lv_name,vg_name 2>/dev/null | grep "config-manager-" | head -n "$to_remove" | while read -r lv vg; do
           lv="$(echo "$lv" | tr -d ' ')"
+          vg="$(echo "$vg" | tr -d ' ')"
           log_info "Removing old LVM snapshot: $lv"
-          lvremove -f "/dev/*/$lv" 2>/dev/null || true
+          lvremove -f "/dev/${vg}/${lv}" 2>/dev/null || true
         done
       fi
       ;;
@@ -258,12 +265,16 @@ snapshot_cleanup() {
 # ---------------------------------------------------------------------------
 # File-level backup (fallback when no snapshot backend)
 # ---------------------------------------------------------------------------
+_file_backup_session_ts=""
+
 file_backup_create() {
   local file_path="$1"
   if [ -z "$_current_snapshot" ] && [ "${_snapshot_backend}" = "none" ]; then
-    local ts
-    ts="$(date '+%Y%m%d-%H%M%S')"
-    local backup_base="${CM_BACKUP_DIR:-/var/lib/config-manager/backups}/config-manager-${ts}"
+    # Use a single timestamp per sync session so all backups land in one dir
+    if [ -z "$_file_backup_session_ts" ]; then
+      _file_backup_session_ts="$(date '+%Y%m%d-%H%M%S')"
+    fi
+    local backup_base="${CM_BACKUP_DIR:-/var/lib/config-manager/backups}/config-manager-${_file_backup_session_ts}"
     local backup_path="${backup_base}${file_path}"
     mkdir -p "$(dirname "$backup_path")"
     cp -a "$file_path" "$backup_path" 2>/dev/null || true

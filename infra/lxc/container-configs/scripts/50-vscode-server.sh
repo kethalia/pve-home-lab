@@ -33,7 +33,7 @@ fi
 EXTENSIONS_FILE="${CONFIG_MANAGER_ROOT}/files/vscode-extensions.txt"
 if [ -f "$EXTENSIONS_FILE" ]; then
   log_info "Installing VS Code extensions..."
-  local code_cmd="code-server"
+  code_cmd="code-server"
   if ! is_installed code-server; then
     log_warn "code-server not available — skipping extensions."
   else

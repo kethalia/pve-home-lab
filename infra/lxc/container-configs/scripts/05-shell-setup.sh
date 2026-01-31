@@ -36,7 +36,7 @@ else
   fi
 
   # Install zsh plugins
-  local plugins_dir="${USER_HOME}/.oh-my-zsh/custom/plugins"
+  plugins_dir="${USER_HOME}/.oh-my-zsh/custom/plugins"
   for plugin in zsh-autosuggestions zsh-syntax-highlighting zsh-completions; do
     if [ ! -d "${plugins_dir}/${plugin}" ]; then
       sudo -u "${CONTAINER_USER}" git clone --quiet \
