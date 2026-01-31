@@ -1,0 +1,10 @@
+node_modules
+.next
+.source
+.git
+.github
+infra
+*.md
+.prettierrc
+.prettierignore
+turbo.json
