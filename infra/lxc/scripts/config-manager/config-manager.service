@@ -1,0 +1,27 @@
+[Unit]
+Description=LXC Configuration Manager - Git-based config sync
+Documentation=https://github.com/kethalia/pve-home-lab
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/config-sync.sh
+RemainAfterExit=no
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=config-manager
+
+# Security hardening
+ProtectSystem=strict
+ReadWritePaths=/var/log/config-manager /opt/config-manager /etc/config-manager /var/run
+PrivateTmp=yes
+NoNewPrivileges=no
+
+# Timeouts
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
