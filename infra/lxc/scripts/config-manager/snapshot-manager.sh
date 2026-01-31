@@ -361,15 +361,15 @@ lvm_cleanup() {
     now="$(date +%s)"
     local removed=0
 
-    while IFS= read -r line; do
-        local lv_name lv_time_str lv_time_epoch
-        lv_name="$(echo "$line" | awk '{print $1}')"
+    # Get both lv_name and lv_time in a single lvs call for efficiency
+    while IFS=$'\t' read -r lv_name lv_time_str; do
         [[ -z "$lv_name" ]] && continue
         [[ "$lv_name" != ${SNAPSHOT_PREFIX}* ]] && continue
 
-        # Get creation time from LV attributes (trim whitespace but preserve internal spaces)
-        lv_time_str="$(lvs --noheadings -o lv_time "/dev/${vg}/${lv_name}" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        # Trim whitespace but preserve internal spaces in date string
+        lv_time_str="$(echo "$lv_time_str" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
         if [[ -n "$lv_time_str" ]]; then
+            local lv_time_epoch
             lv_time_epoch="$(date -d "$lv_time_str" +%s 2>/dev/null || echo 0)"
             local age=$(( now - lv_time_epoch ))
             if [[ $age -gt $retention_secs ]]; then
@@ -381,7 +381,7 @@ lvm_cleanup() {
                 fi
             fi
         fi
-    done < <(lvs --noheadings -o lv_name "$vg" 2>/dev/null)
+    done < <(lvs --noheadings --separator=$'\t' -o lv_name,lv_time "$vg" 2>/dev/null)
 
     log_info "LVM cleanup complete — removed $removed snapshot(s)."
 }
@@ -497,6 +497,8 @@ btrfs_rollback() {
     log_warn "This will create a restore snapshot but NOT automatically activate it."
     log_warn "============================================================"
 
+    # Create a writable copy of the read-only snapshot for restoration
+    # (the original snapshot was created with -r flag, making it read-only)
     local restore_path="${BTRFS_SNAP_DIR}/${name}-restore"
     if btrfs subvolume snapshot "$snap_path" "$restore_path" &>/dev/null; then
         log_info "BTRFS writable restore snapshot created at: $restore_path"
@@ -545,7 +547,8 @@ fallback_create() {
 
             # Preserve directory structure inside backup
             local relative_path="${target_file#/}"
-            local backup_file_dir="${backup_path}/files/$(dirname "$relative_path")"
+            local backup_file_dir
+            backup_file_dir="${backup_path}/files/$(dirname "$relative_path")"
             mkdir -p "$backup_file_dir"
             cp -a "$target_file" "${backup_path}/files/${relative_path}" 2>/dev/null || {
                 log_warn "Failed to back up: $target_file"
@@ -554,6 +557,10 @@ fallback_create() {
             echo "files/${relative_path}" >> "$manifest"
             (( file_count++ )) || true
         done < "$managed_files_list"
+    else
+        log_warn "File-level backup: managed-files.list not found — no managed files will be backed up."
+        log_warn "This is expected on first run before process-files.sh has executed."
+        log_warn "Future: process-files.sh will create this file (tracked in issue #40 follow-up)."
     fi
 
     # Write metadata
@@ -708,7 +715,11 @@ do_create() {
         none)  fallback_create "$name" ;;
     esac
 
-    # If we reach here, the backend succeeded (set -e would exit on failure)
+    # Capture return code - when called inside 'if' blocks, set -e doesn't apply
+    local rc=$?
+    [[ $rc -ne 0 ]] && return $rc
+
+    # Backend succeeded - record snapshot in state file
     echo "$name" > "$SNAPSHOT_STATE_FILE"
     log_info "Snapshot recorded in state file: $name"
 }
@@ -793,6 +804,9 @@ tag_good() {
     local name
     name="$(cat "$SNAPSHOT_STATE_FILE" 2>/dev/null || true)"
     [[ -z "$name" ]] && return 0
+
+    # Strip any existing :good suffix to avoid double-tagging
+    name="${name%%:*}"
 
     # For file-level backups, write a marker
     if [[ "$DETECTED_BACKEND" == "none" ]]; then
