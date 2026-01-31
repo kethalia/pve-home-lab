@@ -2,7 +2,7 @@
 
 Develop remotely from any device.
 Have context specific workspaces.
-Easy workspace reset, with automatic install of pacakges like pnpm, nvm, postgres, etc.
+Easy workspace reset, with automatic install of packages like pnpm, nvm, postgres, etc.
 
 ## Dependencies
 

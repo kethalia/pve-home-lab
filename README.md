@@ -56,7 +56,7 @@ pnpm build
 | Service | Directory | Description |
 |---|---|---|
 | **AI Stack** | `infra/ai/` | Ollama (LLM inference), Open WebUI (chat), Kokoro (TTS), ComfyUI (image generation) — all GPU-accelerated |
-| **Development** | `infra/coder/` | Coder cloud workspaces with Terraform templates, Node.js, Docker, Foundry, and 19 VS Code extensions |
+| **Development** | `infra/coder/` | Coder cloud workspaces with Terraform templates, Node.js, Docker, Foundry, and 20 VS Code extensions |
 | **Deployment** | `infra/dokploy/` | Dokploy self-hosted PaaS with Docker Swarm, Traefik, Postgres, and Redis |
 | **Media** | `infra/jellyfin/` | Jellyfin media server with Gluetun VPN, qBittorrent, Radarr, Sonarr, Prowlarr, and Bazarr |
 | **Gaming** | `infra/gaming/` | Sunshine + Steam cloud gaming with NVIDIA GPU passthrough, streamed via Moonlight |
