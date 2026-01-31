@@ -29,6 +29,10 @@
 
 set -euo pipefail
 
+# Guard against double-sourcing (similar to config-manager-helpers.sh)
+[[ -n "${_SNAPSHOT_MANAGER_LOADED:-}" ]] && return 0
+readonly _SNAPSHOT_MANAGER_LOADED=1
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -36,7 +40,11 @@ readonly SNAPSHOT_PREFIX="config-manager"
 readonly STATE_DIR="/var/lib/config-manager"
 readonly BACKUP_DIR="${STATE_DIR}/backups"
 readonly SNAPSHOT_STATE_FILE="${STATE_DIR}/snapshot-state"
-readonly CONFIG_FILE="/etc/config-manager/config.env"
+
+# Don't redeclare CONFIG_FILE if already set (when sourced from config-sync.sh)
+if [[ -z "${CONFIG_FILE:-}" ]]; then
+    readonly CONFIG_FILE="/etc/config-manager/config.env"
+fi
 
 # ---------------------------------------------------------------------------
 # Logging — provide stubs when not sourced from config-sync.sh
@@ -165,6 +173,14 @@ detect_btrfs() {
 # Auto-detect the best available snapshot backend.
 # Sets DETECTED_BACKEND and backend-specific state variables.
 detect_backend() {
+    # Check for findmnt early (required by all backend detectors)
+    if ! command -v findmnt &>/dev/null; then
+        log_warn "findmnt command not found (util-linux package) — cannot detect ZFS/LVM/BTRFS."
+        log_warn "Falling back to file-level backups. Install util-linux for filesystem snapshot support."
+        DETECTED_BACKEND="none"
+        return 0
+    fi
+
     if [[ "$SNAPSHOT_BACKEND" != "auto" ]]; then
         DETECTED_BACKEND="$SNAPSHOT_BACKEND"
         case "$DETECTED_BACKEND" in
@@ -226,15 +242,9 @@ check_enabled() {
             log_info "Snapshots are disabled (SNAPSHOT_ENABLED=no)."
             return 2
             ;;
-        yes)
-            return 0
-            ;;
-        auto)
-            # With auto, enable if any backend is available
-            if [[ "${DETECTED_BACKEND:-none}" != "none" ]]; then
-                return 0
-            fi
-            # With "auto" and no backend, still use file-level fallback
+        yes|auto)
+            # Both 'yes' and 'auto' enable snapshots
+            # With 'auto' and no backend, file-level fallback is used
             return 0
             ;;
     esac
@@ -275,7 +285,7 @@ zfs_cleanup() {
         if [[ $age -gt $retention_secs ]]; then
             log_info "Removing old ZFS snapshot: $snap_name (age: $(( age / 86400 )) days)"
             if zfs destroy "$snap_name" 2>&1; then
-                (( removed++ ))
+                (( removed++ )) || true
             else
                 log_warn "Failed to remove ZFS snapshot: $snap_name"
             fi
@@ -365,7 +375,7 @@ lvm_cleanup() {
             if [[ $age -gt $retention_secs ]]; then
                 log_info "Removing old LVM snapshot: $lv_name (age: $(( age / 86400 )) days)"
                 if lvremove -f "/dev/${vg}/${lv_name}" 2>&1; then
-                    (( removed++ ))
+                    (( removed++ )) || true
                 else
                     log_warn "Failed to remove LVM snapshot: $lv_name"
                 fi
@@ -430,7 +440,7 @@ btrfs_list() {
             local snap_info
             snap_info="$(btrfs subvolume show "$snap" 2>/dev/null | grep -E 'Creation time' | sed 's/.*Creation time:[[:space:]]*//')" || true
             printf '  %s  (created: %s)\n' "$snap_name" "${snap_info:-unknown}"
-            (( found++ ))
+            (( found++ )) || true
         done
         [[ $found -eq 0 ]] && log_info "  (none)"
     else
@@ -463,7 +473,7 @@ btrfs_cleanup() {
         if [[ $age -gt $retention_secs ]]; then
             log_info "Removing old BTRFS snapshot: $snap_name (age: $(( age / 86400 )) days)"
             if btrfs subvolume delete "$snap" 2>&1; then
-                (( removed++ ))
+                (( removed++ )) || true
             else
                 log_warn "Failed to remove BTRFS snapshot: $snap_name"
             fi
@@ -482,16 +492,21 @@ btrfs_rollback() {
         return 3
     fi
 
-    log_warn "Restoring from BTRFS snapshot: $snap_path"
-    log_warn "This will create a writable snapshot of the read-only snapshot and pivot to it."
+    log_warn "============================================================"
+    log_warn "BTRFS ROLLBACK REQUIRES MANUAL STEPS (unlike ZFS/LVM)"
+    log_warn "This will create a restore snapshot but NOT automatically activate it."
+    log_warn "============================================================"
 
     local restore_path="${BTRFS_SNAP_DIR}/${name}-restore"
     if btrfs subvolume snapshot "$snap_path" "$restore_path" 2>&1; then
         log_info "BTRFS writable restore snapshot created at: $restore_path"
-        log_info "Manual steps required to complete BTRFS rollback:"
-        log_info "  1. Boot into a recovery environment"
-        log_info "  2. Move current root and replace with the restore snapshot"
-        log_info "  3. Reboot"
+        log_warn "Manual steps required to complete BTRFS rollback:"
+        log_warn "  1. Boot into a recovery environment (live USB/CD)"
+        log_warn "  2. Mount the BTRFS filesystem"
+        log_warn "  3. Move current root subvolume aside"
+        log_warn "  4. Move restore snapshot to root subvolume location"
+        log_warn "  5. Reboot and verify system state"
+        log_warn "For assistance: https://btrfs.readthedocs.io/en/latest/Subvolumes.html"
         return 0
     else
         log_error "BTRFS rollback failed: could not create restore snapshot"
@@ -518,7 +533,7 @@ fallback_create() {
     if [[ -d "${STATE_DIR}/state" ]]; then
         cp -a "${STATE_DIR}/state" "${backup_path}/state" 2>/dev/null || true
         echo "state/" >> "$manifest"
-        (( file_count++ ))
+        (( file_count++ )) || true
     fi
 
     # If process-files.sh left a record of managed files, back them up
@@ -537,7 +552,7 @@ fallback_create() {
                 continue
             }
             echo "files/${relative_path}" >> "$manifest"
-            (( file_count++ ))
+            (( file_count++ )) || true
         done < "$managed_files_list"
     fi
 
@@ -572,7 +587,7 @@ fallback_list() {
             created="$(grep '^created=' "${backup}/METADATA" | cut -d= -f2-)" || true
         fi
         printf '  %s  (created: %s)\n' "$backup_name" "$created"
-        (( found++ ))
+        (( found++ )) || true
     done
 
     [[ $found -eq 0 ]] && log_info "  (none)"
@@ -609,7 +624,7 @@ fallback_cleanup() {
             backup_name="$(basename "$backup")"
             log_info "Removing old file-level backup: $backup_name (age: $(( age / 86400 )) days)"
             if rm -rf "$backup"; then
-                (( removed++ ))
+                (( removed++ )) || true
             else
                 log_warn "Failed to remove backup: $backup_name"
             fi
@@ -648,7 +663,7 @@ fallback_rollback() {
 
             if [[ ! -f "$source" ]]; then
                 log_warn "Backup file missing: $source"
-                (( failed++ ))
+                (( failed++ )) || true
                 continue
             fi
 
@@ -658,17 +673,17 @@ fallback_rollback() {
 
             if cp -a "$source" "$target" 2>/dev/null; then
                 log_info "Restored: $target"
-                (( restored++ ))
+                (( restored++ )) || true
             else
                 log_warn "Failed to restore: $target"
-                (( failed++ ))
+                (( failed++ )) || true
             fi
         elif [[ "$entry" == "state/" ]]; then
             # Restore state directory
             if [[ -d "${backup_path}/state" ]]; then
                 cp -a "${backup_path}/state" "${STATE_DIR}/state" 2>/dev/null || true
                 log_info "Restored: config-manager state"
-                (( restored++ ))
+                (( restored++ )) || true
             fi
         fi
     done < "${backup_path}/MANIFEST"

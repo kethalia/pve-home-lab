@@ -160,10 +160,8 @@ validate_repo() {
 }
 
 # ---------------------------------------------------------------------------
-# Orchestration phase stubs
+# Orchestration phases
 # ---------------------------------------------------------------------------
-# Each phase will be implemented in its own issue and script. For now we log
-# a placeholder message so operators know the framework is wired up.
 
 phase_snapshot() {
     local snapshot_script="${LIB_DIR}/snapshot-manager.sh"

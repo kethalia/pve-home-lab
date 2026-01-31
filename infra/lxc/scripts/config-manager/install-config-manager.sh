@@ -158,6 +158,9 @@ SNAPSHOT_RETENTION_DAYS=7
 
 # Snapshot backend: auto (detect best), zfs, lvm, btrfs, or none (file backups)
 SNAPSHOT_BACKEND=auto
+
+# LVM snapshot size (only used with LVM backend, default: 1G)
+# LVM_SNAPSHOT_SIZE=1G
 EOF
 
     chmod 600 "$config_file"
