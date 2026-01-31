@@ -23,7 +23,7 @@ readonly LOG_DIR="/var/log/config-manager"
 readonly LOG_FILE="${LOG_DIR}/sync.log"
 readonly REPO_DIR="/opt/config-manager/repo"
 readonly LIB_DIR="/usr/local/lib/config-manager"
-readonly VERSION="0.2.0"
+readonly VERSION="0.3.0"
 
 # ---------------------------------------------------------------------------
 # Logging helpers
@@ -170,7 +170,15 @@ phase_snapshot() {
 }
 
 phase_execute_scripts() {
-    log_info "[Phase: Scripts] Not yet implemented — see Issue #41 (Script execution engine with alphabetical ordering)."
+    local execute_scripts_file="${LIB_DIR}/execute-scripts.sh"
+
+    if [[ -f "$execute_scripts_file" ]]; then
+        # shellcheck source=/dev/null
+        source "$execute_scripts_file"
+        execute_scripts
+    else
+        log_warn "[Phase: Scripts] execute-scripts.sh not found at ${execute_scripts_file} — skipping."
+    fi
 }
 
 phase_process_files() {

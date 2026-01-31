@@ -169,17 +169,25 @@ install_files() {
     cp "${script_dir}/config-sync.sh" /usr/local/bin/config-sync.sh
     chmod 755 /usr/local/bin/config-sync.sh
 
-    # Copy phase scripts to lib directory
+    # Copy phase scripts and shared libraries to lib directory
     local lib_dir="/usr/local/lib/config-manager"
     mkdir -p "$lib_dir"
-    info "Installing phase scripts to ${lib_dir}/ ..."
-    for phase_script in "${script_dir}"/process-*.sh; do
-        [[ -f "$phase_script" ]] || continue
-        local phase_name
-        phase_name="$(basename "$phase_script")"
-        cp "$phase_script" "${lib_dir}/${phase_name}"
-        chmod 755 "${lib_dir}/${phase_name}"
-        info "  -> ${lib_dir}/${phase_name}"
+    info "Installing phase scripts and libraries to ${lib_dir}/ ..."
+
+    local -a lib_files=(
+        "config-manager-helpers.sh"
+        "execute-scripts.sh"
+        "process-files.sh"
+    )
+
+    for lib_file in "${lib_files[@]}"; do
+        if [[ -f "${script_dir}/${lib_file}" ]]; then
+            cp "${script_dir}/${lib_file}" "${lib_dir}/${lib_file}"
+            chmod 755 "${lib_dir}/${lib_file}"
+            info "  -> ${lib_dir}/${lib_file}"
+        else
+            warn "Optional library not found: ${script_dir}/${lib_file} — skipping."
+        fi
     done
 
     # Copy systemd service
