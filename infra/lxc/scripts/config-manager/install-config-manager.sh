@@ -116,6 +116,8 @@ create_dirs() {
     mkdir -p /etc/config-manager
     mkdir -p /var/log/config-manager
     mkdir -p /opt/config-manager
+    mkdir -p /var/lib/config-manager/backups
+    mkdir -p /var/lib/config-manager/state
 
     info "Directories created."
 }
@@ -146,6 +148,16 @@ CONFIG_BRANCH="${BRANCH}"
 
 # Sub-path inside the repository where container configs live
 CONFIG_PATH="${CONFIG_PATH}"
+
+# --- Snapshot configuration ---
+# Enable snapshots: auto (enable if backend available), yes, or no
+SNAPSHOT_ENABLED=auto
+
+# Number of days to retain old snapshots before cleanup
+SNAPSHOT_RETENTION_DAYS=7
+
+# Snapshot backend: auto (detect best), zfs, lvm, btrfs, or none (file backups)
+SNAPSHOT_BACKEND=auto
 EOF
 
     chmod 600 "$config_file"
@@ -178,6 +190,7 @@ install_files() {
         "config-manager-helpers.sh"
         "execute-scripts.sh"
         "process-files.sh"
+        "snapshot-manager.sh"
     )
 
     for lib_file in "${lib_files[@]}"; do
@@ -240,6 +253,7 @@ $(printf '\033[1;32m')========================================
     2. Run manually:  systemctl start config-manager
     3. Check logs:    journalctl -u config-manager
     4. View sync log: cat /var/log/config-manager/sync.log
+    5. Snapshot status: /usr/local/lib/config-manager/snapshot-manager.sh status
 
 EOF
 }

@@ -19,7 +19,7 @@ SyslogIdentifier=config-manager
 # needs to write configuration files to arbitrary system paths (e.g. /etc,
 # /home). 'full' still protects /usr and /boot.
 ProtectSystem=full
-ReadWritePaths=/var/log/config-manager /opt/config-manager /etc/config-manager
+ReadWritePaths=/var/log/config-manager /opt/config-manager /etc/config-manager /var/lib/config-manager
 RuntimeDirectory=config-manager
 PrivateTmp=yes
 NoNewPrivileges=yes

@@ -166,7 +166,49 @@ validate_repo() {
 # a placeholder message so operators know the framework is wired up.
 
 phase_snapshot() {
-    log_info "[Phase: Snapshot] Not yet implemented — see Issue #42 (System snapshot creation & management)."
+    local snapshot_script="${LIB_DIR}/snapshot-manager.sh"
+
+    if [[ ! -f "$snapshot_script" ]]; then
+        log_warn "[Phase: Snapshot] snapshot-manager.sh not found at ${snapshot_script} — skipping."
+        return 0
+    fi
+
+    # Source snapshot-manager so it inherits our logging functions
+    # shellcheck source=/dev/null
+    source "$snapshot_script"
+
+    load_snapshot_config || {
+        log_warn "[Phase: Snapshot] Invalid snapshot configuration — skipping."
+        return 0
+    }
+
+    detect_backend || {
+        log_warn "[Phase: Snapshot] Backend detection failed — skipping."
+        return 0
+    }
+
+    # Check if enabled — exit code 2 means disabled (not an error)
+    if ! check_enabled; then
+        return 0
+    fi
+
+    log_info "[Phase: Snapshot] Creating pre-sync snapshot..."
+    if do_create; then
+        log_info "[Phase: Snapshot] Pre-sync snapshot created successfully."
+    else
+        log_warn "[Phase: Snapshot] Snapshot creation failed — continuing without snapshot."
+    fi
+}
+
+phase_snapshot_post_success() {
+    # Tag the snapshot as good and clean up old ones after a successful sync
+    if ! declare -f tag_good &>/dev/null; then
+        return 0
+    fi
+
+    log_info "[Phase: Snapshot] Tagging snapshot as good and cleaning up..."
+    tag_good || true
+    do_cleanup || true
 }
 
 phase_execute_scripts() {
@@ -233,7 +275,7 @@ main() {
     # Step 2 — Load configuration
     load_config || exit $?
 
-    # Step 3 — Create snapshot (future — Issue #42)
+    # Step 3 — Create pre-sync snapshot (Issue #42)
     phase_snapshot
 
     # Step 4 — Git clone / pull
@@ -242,16 +284,19 @@ main() {
     # Step 5 — Validate repo structure
     validate_repo
 
-    # Step 6 — Execute scripts (future — Issue #41)
+    # Step 6 — Execute scripts (Issue #41)
     phase_execute_scripts
 
-    # Step 7 — Process files (future — Issue #40)
+    # Step 7 — Process files (Issue #40)
     phase_process_files
 
     # Step 8 — Install packages (future — Issue #44/#45)
     phase_install_packages
 
-    # Step 9 — Summary
+    # Step 9 — Mark snapshot as good and cleanup old snapshots
+    phase_snapshot_post_success
+
+    # Step 10 — Summary
     log_summary
 
     log_info "config-sync completed successfully."
