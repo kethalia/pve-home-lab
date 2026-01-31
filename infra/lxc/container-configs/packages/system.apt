@@ -1,0 +1,19 @@
+# Core system packages for Ubuntu/Debian
+ca-certificates
+curl
+gnupg
+lsb-release
+bash
+build-essential
+git
+htop
+jq
+locales
+man
+nano
+rsync
+software-properties-common
+sudo
+unzip
+vim
+wget

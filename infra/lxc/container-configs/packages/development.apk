@@ -1,0 +1,5 @@
+# Development tools for Alpine
+python3
+py3-pip
+zsh
+zsh-vcs

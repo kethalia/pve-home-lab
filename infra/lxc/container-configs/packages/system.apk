@@ -1,0 +1,15 @@
+# Core system packages for Alpine
+bash
+build-base
+ca-certificates
+curl
+git
+htop
+jq
+nano
+rsync
+shadow
+sudo
+unzip
+vim
+wget

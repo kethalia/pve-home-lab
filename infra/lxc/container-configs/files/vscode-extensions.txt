@@ -1,0 +1,35 @@
+# VS Code Extensions — managed by config-manager
+# One extension ID per line
+
+# Theme & UI
+binary-ink.dark-modern-oled-theme-set
+pkief.material-icon-theme
+oderwat.indent-rainbow
+
+# Blockchain / Web3
+tintinweb.vscode-solidity-language
+nomicfoundation.hardhat-solidity
+
+# Web Development
+bradlc.vscode-tailwindcss
+graphql.vscode-graphql
+graphql.vscode-graphql-syntax
+prisma.prisma
+
+# Code Quality
+esbenp.prettier-vscode
+usernamehw.errorlens
+streetsidesoftware.code-spell-checker
+
+# Git & Collaboration
+eamodio.gitlens
+ms-vsliveshare.vsliveshare
+
+# DevOps & Tools
+hashicorp.terraform
+ms-azuretools.vscode-docker
+
+# Productivity
+gruntfuggly.todo-tree
+pflannery.vscode-versionlens
+wayou.vscode-todo-highlight

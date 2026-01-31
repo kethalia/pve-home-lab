@@ -1,0 +1,16 @@
+[Unit]
+Description=Container Configuration Manager
+Documentation=https://github.com/kethalia/pve-home-lab/tree/main/infra/lxc
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/config-sync.sh
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=600
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
