@@ -122,7 +122,7 @@ detect_zfs() {
     # Check if root is on ZFS
     local dataset
     dataset="$(findmnt -n -o SOURCE / 2>/dev/null)" || return 1
-    if zfs list "$dataset" &>/dev/null 2>&1; then
+    if zfs list "$dataset" &>/dev/null; then
         echo "$dataset"
         return 0
     fi
@@ -257,7 +257,7 @@ zfs_create() {
     local name="$1"
     local snap="${ZFS_DATASET}@${name}"
     log_info "Creating ZFS snapshot: $snap"
-    if zfs snapshot "$snap" 2>&1; then
+    if zfs snapshot "$snap" &>/dev/null; then
         log_info "ZFS snapshot created: $snap"
         return 0
     else
@@ -284,7 +284,7 @@ zfs_cleanup() {
         local age=$(( now - creation_epoch ))
         if [[ $age -gt $retention_secs ]]; then
             log_info "Removing old ZFS snapshot: $snap_name (age: $(( age / 86400 )) days)"
-            if zfs destroy "$snap_name" 2>&1; then
+            if zfs destroy "$snap_name" &>/dev/null; then
                 (( removed++ )) || true
             else
                 log_warn "Failed to remove ZFS snapshot: $snap_name"
@@ -307,7 +307,7 @@ zfs_rollback() {
 
     log_warn "Rolling back ZFS to snapshot: $snap"
     log_warn "This will discard all changes made after the snapshot."
-    if zfs rollback -r "$snap" 2>&1; then
+    if zfs rollback -r "$snap" &>/dev/null; then
         log_info "ZFS rollback complete: $snap"
         return 0
     else
@@ -335,7 +335,7 @@ lvm_create() {
     local snap_size="${LVM_SNAPSHOT_SIZE:-1G}"
 
     log_info "Creating LVM snapshot: $name (source: $lv_path, size: $snap_size)"
-    if lvcreate --snapshot --size "$snap_size" --name "$name" "$lv_path" 2>&1; then
+    if lvcreate --snapshot --size "$snap_size" --name "$name" "$lv_path" &>/dev/null; then
         log_info "LVM snapshot created: $name"
         return 0
     else
@@ -367,14 +367,14 @@ lvm_cleanup() {
         [[ -z "$lv_name" ]] && continue
         [[ "$lv_name" != ${SNAPSHOT_PREFIX}* ]] && continue
 
-        # Get creation time from LV attributes
-        lv_time_str="$(lvs --noheadings -o lv_time "/dev/${vg}/${lv_name}" 2>/dev/null | tr -d ' ')"
+        # Get creation time from LV attributes (trim whitespace but preserve internal spaces)
+        lv_time_str="$(lvs --noheadings -o lv_time "/dev/${vg}/${lv_name}" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
         if [[ -n "$lv_time_str" ]]; then
             lv_time_epoch="$(date -d "$lv_time_str" +%s 2>/dev/null || echo 0)"
             local age=$(( now - lv_time_epoch ))
             if [[ $age -gt $retention_secs ]]; then
                 log_info "Removing old LVM snapshot: $lv_name (age: $(( age / 86400 )) days)"
-                if lvremove -f "/dev/${vg}/${lv_name}" 2>&1; then
+                if lvremove -f "/dev/${vg}/${lv_name}" &>/dev/null; then
                     (( removed++ )) || true
                 else
                     log_warn "Failed to remove LVM snapshot: $lv_name"
@@ -399,7 +399,7 @@ lvm_rollback() {
 
     log_warn "Merging LVM snapshot: $snap_path"
     log_warn "The merge will complete on next reboot/activation."
-    if lvconvert --merge "$snap_path" 2>&1; then
+    if lvconvert --merge "$snap_path" &>/dev/null; then
         log_info "LVM merge scheduled: $snap_path (will complete on next LV activation)"
         return 0
     else
@@ -420,7 +420,7 @@ btrfs_create() {
     mkdir -p "$BTRFS_SNAP_DIR"
 
     log_info "Creating BTRFS snapshot: $snap_path"
-    if btrfs subvolume snapshot -r / "$snap_path" 2>&1; then
+    if btrfs subvolume snapshot -r / "$snap_path" &>/dev/null; then
         log_info "BTRFS snapshot created: $snap_path"
         return 0
     else
@@ -472,7 +472,7 @@ btrfs_cleanup() {
         local age=$(( now - snap_epoch ))
         if [[ $age -gt $retention_secs ]]; then
             log_info "Removing old BTRFS snapshot: $snap_name (age: $(( age / 86400 )) days)"
-            if btrfs subvolume delete "$snap" 2>&1; then
+            if btrfs subvolume delete "$snap" &>/dev/null; then
                 (( removed++ )) || true
             else
                 log_warn "Failed to remove BTRFS snapshot: $snap_name"
@@ -498,7 +498,7 @@ btrfs_rollback() {
     log_warn "============================================================"
 
     local restore_path="${BTRFS_SNAP_DIR}/${name}-restore"
-    if btrfs subvolume snapshot "$snap_path" "$restore_path" 2>&1; then
+    if btrfs subvolume snapshot "$snap_path" "$restore_path" &>/dev/null; then
         log_info "BTRFS writable restore snapshot created at: $restore_path"
         log_warn "Manual steps required to complete BTRFS rollback:"
         log_warn "  1. Boot into a recovery environment (live USB/CD)"
@@ -708,13 +708,9 @@ do_create() {
         none)  fallback_create "$name" ;;
     esac
 
-    local rc=$?
-    if [[ $rc -eq 0 ]]; then
-        # Record last snapshot for post-sync tagging
-        echo "$name" > "$SNAPSHOT_STATE_FILE"
-        log_info "Snapshot recorded in state file: $name"
-    fi
-    return $rc
+    # If we reach here, the backend succeeded (set -e would exit on failure)
+    echo "$name" > "$SNAPSHOT_STATE_FILE"
+    log_info "Snapshot recorded in state file: $name"
 }
 
 do_list() {
