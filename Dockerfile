@@ -21,8 +21,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 
-RUN pnpm --filter web build && \
-    mkdir -p apps/web/public
+RUN mkdir -p apps/web/public && \
+    pnpm --filter web build
 
 # ---
 FROM node:22-alpine AS runner
@@ -42,6 +42,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/
 USER nextjs
 
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 EXPOSE 3000
 
 CMD ["node", "apps/web/server.js"]
