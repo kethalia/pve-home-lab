@@ -169,6 +169,19 @@ install_files() {
     cp "${script_dir}/config-sync.sh" /usr/local/bin/config-sync.sh
     chmod 755 /usr/local/bin/config-sync.sh
 
+    # Copy phase scripts to lib directory
+    local lib_dir="/usr/local/lib/config-manager"
+    mkdir -p "$lib_dir"
+    info "Installing phase scripts to ${lib_dir}/ ..."
+    for phase_script in "${script_dir}"/process-*.sh; do
+        [[ -f "$phase_script" ]] || continue
+        local phase_name
+        phase_name="$(basename "$phase_script")"
+        cp "$phase_script" "${lib_dir}/${phase_name}"
+        chmod 755 "${lib_dir}/${phase_name}"
+        info "  -> ${lib_dir}/${phase_name}"
+    done
+
     # Copy systemd service
     info "Installing systemd service ..."
     cp "${script_dir}/config-manager.service" /etc/systemd/system/config-manager.service
