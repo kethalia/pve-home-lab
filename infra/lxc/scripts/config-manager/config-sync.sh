@@ -22,7 +22,8 @@ readonly LOCK_FILE="/run/config-manager/config-manager.lock"
 readonly LOG_DIR="/var/log/config-manager"
 readonly LOG_FILE="${LOG_DIR}/sync.log"
 readonly REPO_DIR="/opt/config-manager/repo"
-readonly VERSION="0.1.0"
+readonly LIB_DIR="/usr/local/lib/config-manager"
+readonly VERSION="0.2.0"
 
 # ---------------------------------------------------------------------------
 # Logging helpers
@@ -173,7 +174,15 @@ phase_execute_scripts() {
 }
 
 phase_process_files() {
-    log_info "[Phase: Files] Not yet implemented — see Issue #40 (File management system with deployment policies)."
+    local process_files_script="${LIB_DIR}/process-files.sh"
+
+    if [[ -f "$process_files_script" ]]; then
+        # shellcheck source=/dev/null
+        source "$process_files_script"
+        process_files
+    else
+        log_warn "[Phase: Files] process-files.sh not found at ${process_files_script} — skipping."
+    fi
 }
 
 phase_install_packages() {
