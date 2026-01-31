@@ -6,7 +6,7 @@ Dokploy is a stable, easy-to-use deployment solution designed to simplify the ap
 
 ### Docker
 
-Dokploy uses docker to deploy services. The dokploy app is a docker container with postrgres, redis and traefik as docker containers.
+Dokploy uses docker to deploy services. The dokploy app is a docker container with postgres, redis and traefik as docker containers.
 Check [this guide](../docker/README.md) to deploy docker.
 
 ## Install Dokploy

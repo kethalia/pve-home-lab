@@ -1,6 +1,6 @@
 # How to create a tunnel between a public proxy and a private server?
 
-## NPM (Nginx Proxy Manger)
+## NPM (Nginx Proxy Manager)
 
 ### Proxmox LXC Helper Script
 
@@ -29,8 +29,8 @@ mkdir /app && nano /app/docker-compose.yaml
 
 #### Start
 
-Go to the drectory where you have created and saved the `docker-compose.yaml` file.
-Run the docker compose and setup a daemon using the flag `-d`, this configures it to run even if the machine is restarted.
+Go to the directory where you have created and saved the `docker-compose.yaml` file.
+Run the docker compose in detached mode using the flag `-d`. To ensure the containers restart automatically, add a `restart: unless-stopped` policy to your compose file.
 
 ```shell
 cd /app && docker compose up -d
@@ -50,7 +50,7 @@ For your hub and server run the following command:
 apt update && apt install wireguard -y
 ```
 
-### Genearte private and public key
+### Generate private and public key
 
 For in-depth key generation guides check [official page](https://www.wireguard.com/quickstart/#key-generation)
 
@@ -78,19 +78,9 @@ nano /etc/wireguard/wg0.conf
 
 Paste your config and save.
 
-## Configure wireguard
-
-Depending on what device you're setting up, there are different ways to add the config.
-
-```shell
-nano /etc/wireguard/wg0.conf
-```
-
-Paste your config and save.
-
 ### Start
 
-Enable the wireguard service to run on restart and use `--now` to run the service immidiately.
+Enable the wireguard service to run on restart and use `--now` to run the service immediately.
 
 ```shell
 systemctl enable --now wg-quick@wg0
