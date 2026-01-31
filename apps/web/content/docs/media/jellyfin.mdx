@@ -28,16 +28,16 @@ This is required because Radarr, Sonarr, and Bazarr use static IP addresses on t
 
 Create `.env` from `infra/jellyfin/.env.example`:
 
-| Variable | Default | Description |
-|---|---|---|
-| `ROOT_DIR` | `/mnt/media` | Base directory for all service configs and downloads |
-| `VPN_SERVICE_PROVIDER` | `protonvpn` | VPN provider name (see [Gluetun docs](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers)) |
-| `VPN_TYPE` | `wireguard` | VPN protocol |
-| `WIREGUARD_PRIVATE_KEY` | — | Your VPN WireGuard private key |
-| `SERVER_COUNTRIES` | `Netherlands` | VPN server country selection |
-| `RADARR_STATIC_CONTAINER_IP` | `172.50.0.2` | Static IP for Radarr on jellyfin_network |
-| `SONARR_STATIC_CONTAINER_IP` | `172.50.0.3` | Static IP for Sonarr |
-| `BAZARR_STATIC_CONTAINER_IP` | `172.50.0.4` | Static IP for Bazarr |
+| Variable                     | Default       | Description                                                                                             |
+| ---------------------------- | ------------- | ------------------------------------------------------------------------------------------------------- |
+| `ROOT_DIR`                   | `/mnt/media`  | Base directory for all service configs and downloads                                                    |
+| `VPN_SERVICE_PROVIDER`       | `protonvpn`   | VPN provider name (see [Gluetun docs](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers)) |
+| `VPN_TYPE`                   | `wireguard`   | VPN protocol                                                                                            |
+| `WIREGUARD_PRIVATE_KEY`      | —             | Your VPN WireGuard private key                                                                          |
+| `SERVER_COUNTRIES`           | `Netherlands` | VPN server country selection                                                                            |
+| `RADARR_STATIC_CONTAINER_IP` | `172.50.0.2`  | Static IP for Radarr on jellyfin_network                                                                |
+| `SONARR_STATIC_CONTAINER_IP` | `172.50.0.3`  | Static IP for Sonarr                                                                                    |
+| `BAZARR_STATIC_CONTAINER_IP` | `172.50.0.4`  | Static IP for Bazarr                                                                                    |
 
 ## Services
 

@@ -1,6 +1,3 @@
 {
-  "pages": [
-    "index",
-    "sunshine-steam"
-  ]
+  "pages": ["index", "sunshine-steam"]
 }

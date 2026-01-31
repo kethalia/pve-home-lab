@@ -64,13 +64,13 @@ services:
 
 Five NVIDIA device files are mapped into the container:
 
-| Device | Purpose |
-|---|---|
-| `/dev/nvidia0` | Primary GPU |
-| `/dev/nvidiactl` | GPU control interface |
-| `/dev/nvidia-uvm` | Unified Virtual Memory |
-| `/dev/nvidia-uvm-tools` | UVM debugging tools |
-| `/dev/nvidia-caps` | GPU capabilities |
+| Device                  | Purpose                |
+| ----------------------- | ---------------------- |
+| `/dev/nvidia0`          | Primary GPU            |
+| `/dev/nvidiactl`        | GPU control interface  |
+| `/dev/nvidia-uvm`       | Unified Virtual Memory |
+| `/dev/nvidia-uvm-tools` | UVM debugging tools    |
+| `/dev/nvidia-caps`      | GPU capabilities       |
 
 All five must be accessible in the VM. Verify with:
 
@@ -80,18 +80,18 @@ ls -la /dev/nvidia*
 
 ## Port mappings
 
-| Port | Protocol | Purpose |
-|---|---|---|
-| 47984-47990 | TCP | Sunshine control and streaming |
-| 48010 | TCP | Sunshine web UI (HTTPS) |
-| 47998-48000 | UDP | Game streaming data |
+| Port        | Protocol | Purpose                        |
+| ----------- | -------- | ------------------------------ |
+| 47984-47990 | TCP      | Sunshine control and streaming |
+| 48010       | TCP      | Sunshine web UI (HTTPS)        |
+| 47998-48000 | UDP      | Game streaming data            |
 
 ## Volume mounts
 
-| Host path | Container path | Purpose |
-|---|---|---|
+| Host path         | Container path                    | Purpose                          |
+| ----------------- | --------------------------------- | -------------------------------- |
 | `/mnt/steam/data` | `/home/lizard/.local/share/Steam` | Steam client data, game installs |
-| `/mnt/games` | `/mnt/games` | Additional game storage |
+| `/mnt/games`      | `/mnt/games`                      | Additional game storage          |
 
 Mounting Steam data to a persistent host directory means games survive container rebuilds.
 

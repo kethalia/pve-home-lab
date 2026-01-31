@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     volumes:
       - /mnt/steam/data:/home/lizard/.local/share/Steam
-      - /mnt/games:/mnt/games       
+      - /mnt/games:/mnt/games
     devices:
       - /dev/nvidia0:/dev/nvidia0
       - /dev/nvidiactl:/dev/nvidiactl

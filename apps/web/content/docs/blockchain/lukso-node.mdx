@@ -45,25 +45,25 @@ Run `./scripts/setup.sh` to initialize:
 
 All settings are in `.env`:
 
-| Variable | Default | Description |
-|---|---|---|
-| `DATA_DIR` | `/mnt/lukso-node` | Base path for all node data |
-| `LUKSO_NETWORK_ID` | `42` | LUKSO mainnet chain ID |
-| `GETH_VERSION` | `v1.16.1` | Geth Docker image tag |
-| `LIGHTHOUSE_VERSION` | `v7.0.1` | Lighthouse Docker image tag |
-| `GETH_NAT` | `any` | NAT traversal method |
-| `GETH_VERBOSITY` | `3` | Log verbosity (1=silent, 5=trace) |
-| `GETH_MAX_PEERS` | `50` | Maximum execution layer peers |
-| `LIGHTHOUSE_TARGET_PEERS` | `100` | Target consensus layer peers |
-| `CHECKPOINT_SYNC_URL` | `https://checkpoints.mainnet.lukso.network` | Speeds up initial sync significantly |
-| `EXECUTION_BOOTSTRAP_NODE_1` | (enode URL) | Execution layer bootstrap node |
-| `EXECUTION_BOOTSTRAP_NODE_2` | (enode URL) | Execution layer bootstrap node |
-| `CONSENSUS_BOOTSTRAP_NODE_1` | (ENR) | Consensus layer bootstrap node |
-| `CONSENSUS_BOOTSTRAP_NODE_2` | (ENR) | Consensus layer bootstrap node |
-| `PROMETHEUS_RETENTION` | `30d` | Metrics retention period |
-| `GRAFANA_PORT` | `3000` | Grafana web UI port |
-| `GRAFANA_ADMIN_USER` | `admin` | Grafana admin username |
-| `GRAFANA_ADMIN_PASSWORD` | — | **Required**: Set a secure password |
+| Variable                     | Default                                     | Description                          |
+| ---------------------------- | ------------------------------------------- | ------------------------------------ |
+| `DATA_DIR`                   | `/mnt/lukso-node`                           | Base path for all node data          |
+| `LUKSO_NETWORK_ID`           | `42`                                        | LUKSO mainnet chain ID               |
+| `GETH_VERSION`               | `v1.16.1`                                   | Geth Docker image tag                |
+| `LIGHTHOUSE_VERSION`         | `v7.0.1`                                    | Lighthouse Docker image tag          |
+| `GETH_NAT`                   | `any`                                       | NAT traversal method                 |
+| `GETH_VERBOSITY`             | `3`                                         | Log verbosity (1=silent, 5=trace)    |
+| `GETH_MAX_PEERS`             | `50`                                        | Maximum execution layer peers        |
+| `LIGHTHOUSE_TARGET_PEERS`    | `100`                                       | Target consensus layer peers         |
+| `CHECKPOINT_SYNC_URL`        | `https://checkpoints.mainnet.lukso.network` | Speeds up initial sync significantly |
+| `EXECUTION_BOOTSTRAP_NODE_1` | (enode URL)                                 | Execution layer bootstrap node       |
+| `EXECUTION_BOOTSTRAP_NODE_2` | (enode URL)                                 | Execution layer bootstrap node       |
+| `CONSENSUS_BOOTSTRAP_NODE_1` | (ENR)                                       | Consensus layer bootstrap node       |
+| `CONSENSUS_BOOTSTRAP_NODE_2` | (ENR)                                       | Consensus layer bootstrap node       |
+| `PROMETHEUS_RETENTION`       | `30d`                                       | Metrics retention period             |
+| `GRAFANA_PORT`               | `3000`                                      | Grafana web UI port                  |
+| `GRAFANA_ADMIN_USER`         | `admin`                                     | Grafana admin username               |
+| `GRAFANA_ADMIN_PASSWORD`     | —                                           | **Required**: Set a secure password  |
 
 ## Services
 
@@ -100,16 +100,16 @@ All settings are in `.env`:
 
 ## Endpoints
 
-| Service | Port | Protocol | Access |
-|---|---|---|---|
-| Geth HTTP RPC | 8545 | HTTP | Open |
-| Geth WebSocket | 8546 | WS | Open |
-| Geth GraphQL | 8547 | HTTP | Open |
-| Geth P2P | 30303 | TCP + UDP | Open (required) |
-| Lighthouse Beacon API | 5052 | HTTP | Localhost only |
-| Lighthouse P2P | 9000 | TCP + UDP | Open (required) |
-| Prometheus | 9090 | HTTP | Localhost only |
-| Grafana | 3000 | HTTP | Configurable |
+| Service               | Port  | Protocol  | Access          |
+| --------------------- | ----- | --------- | --------------- |
+| Geth HTTP RPC         | 8545  | HTTP      | Open            |
+| Geth WebSocket        | 8546  | WS        | Open            |
+| Geth GraphQL          | 8547  | HTTP      | Open            |
+| Geth P2P              | 30303 | TCP + UDP | Open (required) |
+| Lighthouse Beacon API | 5052  | HTTP      | Localhost only  |
+| Lighthouse P2P        | 9000  | TCP + UDP | Open (required) |
+| Prometheus            | 9090  | HTTP      | Localhost only  |
+| Grafana               | 3000  | HTTP      | Configurable    |
 
 ## Helper scripts
 
@@ -120,6 +120,7 @@ All settings are in `.env`:
 ```
 
 Reports:
+
 - Geth sync status (syncing or synced at block N)
 - Lighthouse sync status (syncing or synced at slot N)
 - Peer counts for both clients
@@ -139,6 +140,7 @@ Queries the GitHub API for the latest Geth and Lighthouse releases and shows cur
 ```
 
 Interactive script that:
+
 1. Confirms you want to proceed
 2. Stops all containers
 3. Deletes Geth chaindata and triecache

@@ -1,6 +1,3 @@
 {
-  "pages": [
-    "index",
-    "dokploy"
-  ]
+  "pages": ["index", "dokploy"]
 }

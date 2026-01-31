@@ -34,12 +34,12 @@ ollama:
 
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `OLLAMA_PORT` | `11434` | Port for the Ollama API |
-| `OLLAMA_DATA_DIR` | `/data/ollama` | Persistent storage for models and data |
-| `OLLAMA_FLASH_ATTENTION` | `1` | Enable flash attention for faster inference |
-| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | KV cache quantization (`q4_0` or `q8_0`). Lower uses less VRAM but reduces quality slightly |
+| Variable                 | Default        | Description                                                                                 |
+| ------------------------ | -------------- | ------------------------------------------------------------------------------------------- |
+| `OLLAMA_PORT`            | `11434`        | Port for the Ollama API                                                                     |
+| `OLLAMA_DATA_DIR`        | `/data/ollama` | Persistent storage for models and data                                                      |
+| `OLLAMA_FLASH_ATTENTION` | `1`            | Enable flash attention for faster inference                                                 |
+| `OLLAMA_KV_CACHE_TYPE`   | `q8_0`         | KV cache quantization (`q4_0` or `q8_0`). Lower uses less VRAM but reduces quality slightly |
 
 ## Standalone deployment
 
@@ -68,6 +68,7 @@ services:
 ```
 
 Key differences from the main stack:
+
 - Uses only **1 GPU** instead of all
 - Separate mount points for data and models (`OLLAMA_DATA_DIR` and `OLLAMA_MODELS_DIR`)
 

@@ -53,34 +53,34 @@ All VMs and containers communicate over Proxmox's default Linux bridge (`vmbr0`)
 
 ### Service ports reference
 
-| Service | VM/LXC | Internal port | Notes |
-|---|---|---|---|
-| Open WebUI | AI VM | 8080 | LLM chat interface |
-| Ollama | AI VM | 11434 | LLM API |
-| Kokoro | AI VM | 3000 | TTS API |
-| ComfyUI | AI VM | 8188 | Image generation |
-| Jellyfin | Media VM | 8096 | Media player |
-| qBittorrent | Media VM | 5080 | Behind VPN |
-| Prowlarr | Media VM | 9696 | Behind VPN |
-| Radarr | Media VM | 7878 | Movie manager |
-| Sonarr | Media VM | 8989 | TV manager |
-| Bazarr | Media VM | 6767 | Subtitles |
-| Sunshine | Gaming VM | 47984-47990 | Game streaming |
-| Geth RPC | Blockchain VM | 8545 | JSON-RPC |
-| Geth P2P | Blockchain VM | 30303 | Peer discovery |
-| Lighthouse P2P | Blockchain VM | 9000 | Peer discovery |
-| Grafana | Blockchain VM | 3000 | Monitoring |
-| Dokploy | Deployment LXC | 3000 | PaaS dashboard |
-| Coder | Dev LXC | 3000 | Dev workspaces |
-| NPM Admin | NPM LXC | 81 | Proxy manager UI |
+| Service        | VM/LXC         | Internal port | Notes              |
+| -------------- | -------------- | ------------- | ------------------ |
+| Open WebUI     | AI VM          | 8080          | LLM chat interface |
+| Ollama         | AI VM          | 11434         | LLM API            |
+| Kokoro         | AI VM          | 3000          | TTS API            |
+| ComfyUI        | AI VM          | 8188          | Image generation   |
+| Jellyfin       | Media VM       | 8096          | Media player       |
+| qBittorrent    | Media VM       | 5080          | Behind VPN         |
+| Prowlarr       | Media VM       | 9696          | Behind VPN         |
+| Radarr         | Media VM       | 7878          | Movie manager      |
+| Sonarr         | Media VM       | 8989          | TV manager         |
+| Bazarr         | Media VM       | 6767          | Subtitles          |
+| Sunshine       | Gaming VM      | 47984-47990   | Game streaming     |
+| Geth RPC       | Blockchain VM  | 8545          | JSON-RPC           |
+| Geth P2P       | Blockchain VM  | 30303         | Peer discovery     |
+| Lighthouse P2P | Blockchain VM  | 9000          | Peer discovery     |
+| Grafana        | Blockchain VM  | 3000          | Monitoring         |
+| Dokploy        | Deployment LXC | 3000          | PaaS dashboard     |
+| Coder          | Dev LXC        | 3000          | Dev workspaces     |
+| NPM Admin      | NPM LXC        | 81            | Proxy manager UI   |
 
 ### Ports that must be open on your router
 
-| Port | Protocol | Destination | Purpose |
-|---|---|---|---|
-| 30303 | TCP + UDP | Blockchain VM | Geth P2P |
-| 9000 | TCP + UDP | Blockchain VM | Lighthouse P2P |
-| 51821 | UDP | Home server | WireGuard tunnel |
+| Port  | Protocol  | Destination   | Purpose          |
+| ----- | --------- | ------------- | ---------------- |
+| 30303 | TCP + UDP | Blockchain VM | Geth P2P         |
+| 9000  | TCP + UDP | Blockchain VM | Lighthouse P2P   |
+| 51821 | UDP       | Home server   | WireGuard tunnel |
 
 All other services are accessed through the WireGuard tunnel and NPM reverse proxy — no additional ports need to be forwarded.
 

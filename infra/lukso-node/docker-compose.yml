@@ -38,10 +38,10 @@ services:
           --metrics \
           --metrics.addr=0.0.0.0
     ports:
-      - 8545:8545     # HTTP RPC
-      - 8546:8546     # WebSocket
-      - 8547:8547     # GraphQL
-      - 30303:30303   # P2P TCP
+      - 8545:8545 # HTTP RPC
+      - 8546:8546 # WebSocket
+      - 8547:8547 # GraphQL
+      - 30303:30303 # P2P TCP
       - 30303:30303/udp
     volumes:
       - ${DATA_DIR:-/mnt/lukso-node}/geth:/geth

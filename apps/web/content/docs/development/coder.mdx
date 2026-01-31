@@ -48,19 +48,19 @@ coder ssh my-workspace
 
 Once inside a workspace, you have access to:
 
-| Tool | Details |
-|---|---|
-| VS Code Server | 19 pre-installed extensions, accessible in browser |
-| Node.js | Versions 18, 20, 22, 24 (default: 24) via version switcher |
-| PNPM | Latest version, installed on first boot |
-| Docker | Full access via host socket mount |
-| Foundry | forge, cast, anvil, chisel for Solidity development |
-| act | Run GitHub Actions locally |
-| GitHub CLI | Auto-authenticated via Coder external auth |
-| PostgreSQL 16 | Local database (user: coder, db: coder) |
-| ZSH | Oh My Zsh with Powerlevel10k and plugins |
-| OpenCode | AI coding assistant with web UI |
-| File Browser | Web-based file manager |
+| Tool           | Details                                                    |
+| -------------- | ---------------------------------------------------------- |
+| VS Code Server | 19 pre-installed extensions, accessible in browser         |
+| Node.js        | Versions 18, 20, 22, 24 (default: 24) via version switcher |
+| PNPM           | Latest version, installed on first boot                    |
+| Docker         | Full access via host socket mount                          |
+| Foundry        | forge, cast, anvil, chisel for Solidity development        |
+| act            | Run GitHub Actions locally                                 |
+| GitHub CLI     | Auto-authenticated via Coder external auth                 |
+| PostgreSQL 16  | Local database (user: coder, db: coder)                    |
+| ZSH            | Oh My Zsh with Powerlevel10k and plugins                   |
+| OpenCode       | AI coding assistant with web UI                            |
+| File Browser   | Web-based file manager                                     |
 
 ## Shell aliases
 
@@ -92,11 +92,11 @@ git lg      # pretty log graph
 
 Default workspace resources:
 
-| Resource | Default | Configurable |
-|---|---|---|
-| Memory | 8 GB | Yes, via `main.tf` |
-| CPU | 4 cores | Yes, via `main.tf` |
-| Swap | 16 GB | Automatic (2x memory) |
+| Resource    | Default    | Configurable                |
+| ----------- | ---------- | --------------------------- |
+| Memory      | 8 GB       | Yes, via `main.tf`          |
+| CPU         | 4 cores    | Yes, via `main.tf`          |
+| Swap        | 16 GB      | Automatic (2x memory)       |
 | Home volume | Persistent | Survives workspace restarts |
 
 ## Workspace monitoring

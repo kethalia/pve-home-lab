@@ -1,11 +1,11 @@
 # LUKSO config
 
 # Extends the mainnet preset
-PRESET_BASE: 'mainnet'
+PRESET_BASE: "mainnet"
 
 # Free-form short name of the network that this configuration applies to
 # Must match the regex: [a-z0-9\-]
-CONFIG_NAME: 'lukso'
+CONFIG_NAME: "lukso"
 
 # Genesis
 # ---------------------------------------------------------------

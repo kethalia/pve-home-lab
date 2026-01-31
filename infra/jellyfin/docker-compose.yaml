@@ -134,4 +134,3 @@ services:
 networks:
   jellyfin_network:
     external: true
-    

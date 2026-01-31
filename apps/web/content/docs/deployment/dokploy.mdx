@@ -19,12 +19,12 @@ The full stack is defined in `infra/dokploy/docker-compose.yaml`:
 
 ### Services
 
-| Service | Image | Purpose | Port |
-|---|---|---|---|
-| `dokploy-postgres` | `postgres:16` | Application database | Internal |
-| `dokploy-redis` | `redis:7` | Cache and job queue | Internal |
-| `dokploy` | `dokploy/dokploy:latest` | Main application | 3000 |
-| `dokploy-traefik` | `traefik:v3.1.2` | Reverse proxy, TLS | 80, 443 |
+| Service            | Image                    | Purpose              | Port     |
+| ------------------ | ------------------------ | -------------------- | -------- |
+| `dokploy-postgres` | `postgres:16`            | Application database | Internal |
+| `dokploy-redis`    | `redis:7`                | Cache and job queue  | Internal |
+| `dokploy`          | `dokploy/dokploy:latest` | Main application     | 3000     |
+| `dokploy-traefik`  | `traefik:v3.1.2`         | Reverse proxy, TLS   | 80, 443  |
 
 All services run on the `dokploy-network` Docker overlay network and are constrained to the Swarm manager node.
 
@@ -47,6 +47,7 @@ The install script (`infra/dokploy/install.sh`, 153 lines) automates the entire 
    - Ports 80 and 443 must be free
 
 2. **Installs Docker** (if not already installed):
+
    ```bash
    curl -sSL https://get.docker.com | sh
    ```

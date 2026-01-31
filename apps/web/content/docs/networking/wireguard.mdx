@@ -33,6 +33,7 @@ wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
 ```
 
 You will need:
+
 - Public VPS: its private key and the home server's public key
 - Home server: its private key and the VPS's public key
 
@@ -67,17 +68,18 @@ AllowedIPs = 10.0.0.1
 ```
 
 Replace:
+
 - `PUBLIC_SERVER_PRIVATE_KEY` with the VPS's private key
 - `PRIVATE_SERVER_PUBLIC_KEY` with the home server's public key
 - `eth0` with the VPS's public network interface (check with `ip route | grep default`)
 
 ### What the iptables rules do
 
-| Rule | Purpose |
-|---|---|
-| `PREROUTING DNAT :80 → 10.0.0.1:80` | Forwards HTTP traffic to home server |
-| `PREROUTING DNAT :443 → 10.0.0.1:443` | Forwards HTTPS traffic to home server |
-| `POSTROUTING MASQUERADE` | Rewrites source address so return traffic goes back through the tunnel |
+| Rule                                  | Purpose                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| `PREROUTING DNAT :80 → 10.0.0.1:80`   | Forwards HTTP traffic to home server                                   |
+| `PREROUTING DNAT :443 → 10.0.0.1:443` | Forwards HTTPS traffic to home server                                  |
+| `POSTROUTING MASQUERADE`              | Rewrites source address so return traffic goes back through the tunnel |
 
 ## Step 4: Configure the home server
 
@@ -99,6 +101,7 @@ PersistentKeepalive = 25
 ```
 
 Replace:
+
 - `PRIVATE_SERVER_PRIVATE_KEY` with the home server's private key
 - `PUBLIC_SERVER_PUBLIC_KEY` with the VPS's public key
 - `PUBLIC_SERVER_IP_ADDRESS` with the VPS's public IP
@@ -165,6 +168,7 @@ docker compose up -d
 Access the NPM admin panel at `http://<home-server-ip>:81`.
 
 Default credentials:
+
 - **Email**: `admin@example.com`
 - **Password**: `changeme`
 
@@ -176,11 +180,11 @@ Change these immediately after first login.
 2. In NPM, go to **Proxy Hosts > Add Proxy Host**
 3. For each service:
 
-| Domain | Forward to | Port | SSL |
-|---|---|---|---|
-| `jellyfin.yourdomain.com` | `<media-vm-ip>` | 8096 | Let's Encrypt |
-| `coder.yourdomain.com` | `<dev-lxc-ip>` | 3000 | Let's Encrypt |
-| `dokploy.yourdomain.com` | `<deploy-lxc-ip>` | 3000 | Let's Encrypt |
+| Domain                    | Forward to        | Port | SSL           |
+| ------------------------- | ----------------- | ---- | ------------- |
+| `jellyfin.yourdomain.com` | `<media-vm-ip>`   | 8096 | Let's Encrypt |
+| `coder.yourdomain.com`    | `<dev-lxc-ip>`    | 3000 | Let's Encrypt |
+| `dokploy.yourdomain.com`  | `<deploy-lxc-ip>` | 3000 | Let's Encrypt |
 
 NPM handles Let's Encrypt certificate issuance and renewal automatically.
 

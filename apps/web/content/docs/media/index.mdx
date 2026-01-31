@@ -36,15 +36,15 @@ The media stack provides a complete self-hosted media server with automated cont
 
 ### Service roles
 
-| Service | Role | Network |
-|---|---|---|
-| **Gluetun** | VPN gateway — all download traffic routes through this | jellyfin_network |
-| **qBittorrent** | Torrent client, runs behind VPN (`network_mode: service:vpn`) | Via Gluetun |
-| **Prowlarr** | Indexer manager, runs behind VPN | Via Gluetun |
-| **Radarr** | Movie management — searches, grabs, renames | jellyfin_network |
-| **Sonarr** | TV show management — same as Radarr but for series | jellyfin_network |
-| **Bazarr** | Subtitle management — auto-downloads subtitles | jellyfin_network |
-| **Jellyfin** | Media player with GPU transcoding | Host network |
+| Service         | Role                                                          | Network          |
+| --------------- | ------------------------------------------------------------- | ---------------- |
+| **Gluetun**     | VPN gateway — all download traffic routes through this        | jellyfin_network |
+| **qBittorrent** | Torrent client, runs behind VPN (`network_mode: service:vpn`) | Via Gluetun      |
+| **Prowlarr**    | Indexer manager, runs behind VPN                              | Via Gluetun      |
+| **Radarr**      | Movie management — searches, grabs, renames                   | jellyfin_network |
+| **Sonarr**      | TV show management — same as Radarr but for series            | jellyfin_network |
+| **Bazarr**      | Subtitle management — auto-downloads subtitles                | jellyfin_network |
+| **Jellyfin**    | Media player with GPU transcoding                             | Host network     |
 
 ### Data flow
 

@@ -1,9 +1,3 @@
 {
-  "pages": [
-    "index",
-    "ollama",
-    "open-webui",
-    "kokoro",
-    "comfyui"
-  ]
+  "pages": ["index", "ollama", "open-webui", "kokoro", "comfyui"]
 }

@@ -34,17 +34,17 @@ open-webui:
 
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `OPEN_WEBUI_PORT` | `8080` | Port for the web UI |
-| `WEBUI_SECRET_KEY` | — | Secret key for session encryption |
-| `OPEN_WEBUI_DATA_DIR` | `/data/open-webui` | Persistent storage for user data, chat history |
-| `OLLAMA_BASE_URL` | `http://ollama:11434` | URL of the Ollama service (uses Docker service name) |
-| `AUDIO_TTS_OPENAI_API_BASE_URL` | `http://kokoro-web:3000/api/v1` | Kokoro TTS endpoint |
-| `AUDIO_TTS_OPENAI_API_KEY` | `${KW_SECRET_API_KEY}` | API key for Kokoro (must match Kokoro's key) |
-| `AUDIO_TTS_ENGINE` | `openai` | TTS engine type (Kokoro uses OpenAI-compatible API) |
-| `AUDIO_TTS_MODEL` | `model` | TTS model name |
-| `AUDIO_TTS_VOICE` | `af_heart` | TTS voice preset |
+| Variable                        | Default                         | Description                                          |
+| ------------------------------- | ------------------------------- | ---------------------------------------------------- |
+| `OPEN_WEBUI_PORT`               | `8080`                          | Port for the web UI                                  |
+| `WEBUI_SECRET_KEY`              | —                               | Secret key for session encryption                    |
+| `OPEN_WEBUI_DATA_DIR`           | `/data/open-webui`              | Persistent storage for user data, chat history       |
+| `OLLAMA_BASE_URL`               | `http://ollama:11434`           | URL of the Ollama service (uses Docker service name) |
+| `AUDIO_TTS_OPENAI_API_BASE_URL` | `http://kokoro-web:3000/api/v1` | Kokoro TTS endpoint                                  |
+| `AUDIO_TTS_OPENAI_API_KEY`      | `${KW_SECRET_API_KEY}`          | API key for Kokoro (must match Kokoro's key)         |
+| `AUDIO_TTS_ENGINE`              | `openai`                        | TTS engine type (Kokoro uses OpenAI-compatible API)  |
+| `AUDIO_TTS_MODEL`               | `model`                         | TTS model name                                       |
+| `AUDIO_TTS_VOICE`               | `af_heart`                      | TTS voice preset                                     |
 
 ## Service dependencies
 

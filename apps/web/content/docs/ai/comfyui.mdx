@@ -33,9 +33,9 @@ comfy-ui:
 
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `COMFY_UI_PORT` | `8188` | Port for the ComfyUI web interface |
+| Variable            | Default          | Description                                    |
+| ------------------- | ---------------- | ---------------------------------------------- |
+| `COMFY_UI_PORT`     | `8188`           | Port for the ComfyUI web interface             |
 | `COMFY_UI_DATA_DIR` | `/data/comfy-ui` | Base directory for models, inputs, and outputs |
 
 ## Custom Dockerfile
@@ -69,6 +69,7 @@ CMD ["bash", "start.sh"]
 ```
 
 The build:
+
 1. Starts from Debian 12
 2. Clones the ComfyUI repository from GitHub
 3. Creates a Python virtual environment
@@ -79,11 +80,11 @@ The build:
 
 Three subdirectories are mounted for persistence:
 
-| Mount | Container path | Purpose |
-|---|---|---|
+| Mount     | Container path    | Purpose                                         |
+| --------- | ----------------- | ----------------------------------------------- |
 | `models/` | `/ComfyUI/models` | Stable Diffusion checkpoints, LoRAs, VAEs, etc. |
-| `input/` | `/ComfyUI/input` | Input images for img2img workflows |
-| `output/` | `/ComfyUI/output` | Generated images |
+| `input/`  | `/ComfyUI/input`  | Input images for img2img workflows              |
+| `output/` | `/ComfyUI/output` | Generated images                                |
 
 Download model checkpoints into the `models/` directory. ComfyUI will automatically detect them.
 

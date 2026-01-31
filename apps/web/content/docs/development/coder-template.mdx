@@ -57,41 +57,41 @@ The Coder agent runs a startup script that handles:
 
 The template uses several official Coder modules:
 
-| Module | Purpose |
-|---|---|
-| `code-server` | VS Code in the browser with 19 extensions |
-| `opencode` | AI coding assistant (CLI + web UI on port 62748) |
-| `filebrowser` | Web-based file manager |
-| `github-upload-public-key` | Syncs SSH keys to GitHub |
-| `git-commit-signing` | GPG commit signing |
-| `git-config` | Git user configuration |
-| `nodejs` | Node.js version manager (18, 20, 22, 24) |
+| Module                     | Purpose                                          |
+| -------------------------- | ------------------------------------------------ |
+| `code-server`              | VS Code in the browser with 19 extensions        |
+| `opencode`                 | AI coding assistant (CLI + web UI on port 62748) |
+| `filebrowser`              | Web-based file manager                           |
+| `github-upload-public-key` | Syncs SSH keys to GitHub                         |
+| `git-commit-signing`       | GPG commit signing                               |
+| `git-config`               | Git user configuration                           |
+| `nodejs`                   | Node.js version manager (18, 20, 22, 24)         |
 
 ### VS Code extensions
 
 19 extensions are pre-installed and configured:
 
-| Extension | Purpose |
-|---|---|
-| `dark-modern-oled-theme-set` | Color theme |
-| `material-icon-theme` | File icons |
-| `prisma` | Prisma ORM |
-| `vscode-graphql` + `vscode-graphql-syntax` | GraphQL |
-| `vscode-tailwindcss` | Tailwind CSS IntelliSense |
-| `vscode-solidity-language` | Solidity language support |
-| `hardhat-solidity` | Hardhat integration |
-| `prettier-vscode` | Code formatter |
-| `gitlens` | Git blame, history |
-| `indent-rainbow` | Indentation visualization |
-| `todo-tree` | TODO/FIXME tracking |
-| `vscode-versionlens` | Package version info |
-| `vsliveshare` | Live Share collaboration |
-| `terraform` | Terraform/HCL support |
-| `vscode-docker` | Docker integration |
-| `vscode-postgresql-client2` | PostgreSQL client |
-| `errorlens` | Inline error display |
-| `code-spell-checker` | Spell checking |
-| `vscode-todo-highlight` | TODO highlighting |
+| Extension                                  | Purpose                   |
+| ------------------------------------------ | ------------------------- |
+| `dark-modern-oled-theme-set`               | Color theme               |
+| `material-icon-theme`                      | File icons                |
+| `prisma`                                   | Prisma ORM                |
+| `vscode-graphql` + `vscode-graphql-syntax` | GraphQL                   |
+| `vscode-tailwindcss`                       | Tailwind CSS IntelliSense |
+| `vscode-solidity-language`                 | Solidity language support |
+| `hardhat-solidity`                         | Hardhat integration       |
+| `prettier-vscode`                          | Code formatter            |
+| `gitlens`                                  | Git blame, history        |
+| `indent-rainbow`                           | Indentation visualization |
+| `todo-tree`                                | TODO/FIXME tracking       |
+| `vscode-versionlens`                       | Package version info      |
+| `vsliveshare`                              | Live Share collaboration  |
+| `terraform`                                | Terraform/HCL support     |
+| `vscode-docker`                            | Docker integration        |
+| `vscode-postgresql-client2`                | PostgreSQL client         |
+| `errorlens`                                | Inline error display      |
+| `code-spell-checker`                       | Spell checking            |
+| `vscode-todo-highlight`                    | TODO highlighting         |
 
 ### Development tools script
 
@@ -132,12 +132,12 @@ Image size is approximately 3.6 GB. Pre-configured shell aliases and PostgreSQL 
 
 ## Performance
 
-| Metric | Value |
-|---|---|
-| First boot | 3-5 minutes (installs Oh My Zsh, PNPM, Foundry, act) |
-| Subsequent boots | 30-60 seconds (services only) |
-| Idle RAM usage | ~500 MB |
-| Active development | 2-4 GB RAM, 10-50% CPU |
+| Metric             | Value                                                |
+| ------------------ | ---------------------------------------------------- |
+| First boot         | 3-5 minutes (installs Oh My Zsh, PNPM, Foundry, act) |
+| Subsequent boots   | 30-60 seconds (services only)                        |
+| Idle RAM usage     | ~500 MB                                              |
+| Active development | 2-4 GB RAM, 10-50% CPU                               |
 
 ## Security considerations
 

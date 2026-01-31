@@ -1,73 +1,73 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 const features = [
   {
-    title: 'Getting Started',
+    title: "Getting Started",
     description:
-      'Hardware recommendations, Proxmox VE setup, Docker installation, and network topology.',
-    href: '/docs/getting-started',
-    icon: '~',
+      "Hardware recommendations, Proxmox VE setup, Docker installation, and network topology.",
+    href: "/docs/getting-started",
+    icon: "~",
   },
   {
-    title: 'AI Stack',
+    title: "AI Stack",
     description:
-      'Ollama for LLM inference, Open WebUI for chat, Kokoro TTS, and ComfyUI for image generation.',
-    href: '/docs/ai',
-    icon: '%',
+      "Ollama for LLM inference, Open WebUI for chat, Kokoro TTS, and ComfyUI for image generation.",
+    href: "/docs/ai",
+    icon: "%",
   },
   {
-    title: 'Development',
+    title: "Development",
     description:
-      'Coder cloud workspaces with Node.js, Docker, Foundry, and 19 VS Code extensions.',
-    href: '/docs/development',
-    icon: '>_',
+      "Coder cloud workspaces with Node.js, Docker, Foundry, and 19 VS Code extensions.",
+    href: "/docs/development",
+    icon: ">_",
   },
   {
-    title: 'Deployment',
+    title: "Deployment",
     description:
-      'Dokploy self-hosted PaaS with Docker Swarm, Traefik reverse proxy, and automatic TLS.',
-    href: '/docs/deployment',
-    icon: '^',
+      "Dokploy self-hosted PaaS with Docker Swarm, Traefik reverse proxy, and automatic TLS.",
+    href: "/docs/deployment",
+    icon: "^",
   },
   {
-    title: 'Media Server',
+    title: "Media Server",
     description:
-      'Jellyfin with VPN-routed automated downloading via Radarr, Sonarr, and Prowlarr.',
-    href: '/docs/media',
-    icon: '#',
+      "Jellyfin with VPN-routed automated downloading via Radarr, Sonarr, and Prowlarr.",
+    href: "/docs/media",
+    icon: "#",
   },
   {
-    title: 'Cloud Gaming',
+    title: "Cloud Gaming",
     description:
-      'Sunshine + Steam game streaming with NVIDIA GPU passthrough and Moonlight clients.',
-    href: '/docs/gaming',
-    icon: '*',
+      "Sunshine + Steam game streaming with NVIDIA GPU passthrough and Moonlight clients.",
+    href: "/docs/gaming",
+    icon: "*",
   },
   {
-    title: 'Blockchain',
+    title: "Blockchain",
     description:
-      'LUKSO full node running Geth + Lighthouse with Prometheus and Grafana monitoring.',
-    href: '/docs/blockchain',
-    icon: '$',
+      "LUKSO full node running Geth + Lighthouse with Prometheus and Grafana monitoring.",
+    href: "/docs/blockchain",
+    icon: "$",
   },
   {
-    title: 'Networking',
+    title: "Networking",
     description:
-      'WireGuard VPN tunnel to a public VPS with Nginx Proxy Manager for reverse proxying.',
-    href: '/docs/networking',
-    icon: '&',
+      "WireGuard VPN tunnel to a public VPS with Nginx Proxy Manager for reverse proxying.",
+    href: "/docs/networking",
+    icon: "&",
   },
 ];
 
 const techStack = [
-  'Proxmox VE',
-  'Docker',
-  'NVIDIA CUDA',
-  'Terraform',
-  'WireGuard',
-  'Next.js',
-  'Tailwind CSS',
-  'Turborepo',
+  "Proxmox VE",
+  "Docker",
+  "NVIDIA CUDA",
+  "Terraform",
+  "WireGuard",
+  "Next.js",
+  "Tailwind CSS",
+  "Turborepo",
 ];
 
 export default function HomePage() {
