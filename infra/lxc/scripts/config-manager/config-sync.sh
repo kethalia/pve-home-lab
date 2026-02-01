@@ -23,7 +23,7 @@ readonly LOG_DIR="/var/log/config-manager"
 readonly LOG_FILE="${LOG_DIR}/sync.log"
 readonly REPO_DIR="/opt/config-manager/repo"
 readonly LIB_DIR="/usr/local/lib/config-manager"
-readonly VERSION="0.3.0"
+readonly VERSION="0.4.0"
 
 # ---------------------------------------------------------------------------
 # Logging helpers
@@ -209,6 +209,44 @@ phase_snapshot_post_success() {
     do_cleanup || true
 }
 
+phase_conflict_pre_sync() {
+    local conflict_script="${LIB_DIR}/conflict-detector.sh"
+
+    if [[ ! -f "$conflict_script" ]]; then
+        log_warn "[Phase: Conflict] conflict-detector.sh not found at ${conflict_script} — skipping."
+        return 0
+    fi
+
+    # shellcheck source=/dev/null
+    source "$conflict_script"
+
+    log_info "[Phase: Conflict] Recording pre-sync checksums..."
+    record_pre_sync_checksums
+}
+
+phase_conflict_detect() {
+    # Only run if conflict-detector was loaded in phase_conflict_pre_sync
+    if ! declare -f detect_conflicts &>/dev/null; then
+        return 0
+    fi
+
+    log_info "[Phase: Conflict] Checking for conflicts after git pull..."
+    if ! detect_conflicts; then
+        log_error "[Phase: Conflict] Conflicts detected — aborting sync."
+        log_error "[Phase: Conflict] Run 'config-rollback status' for details."
+        return 5
+    fi
+
+    log_info "[Phase: Conflict] No conflicts detected — proceeding with sync."
+}
+
+phase_conflict_post_success() {
+    # Save checksums after successful sync for next run's comparison
+    if declare -f save_successful_checksums &>/dev/null; then
+        save_successful_checksums
+    fi
+}
+
 phase_execute_scripts() {
     local execute_scripts_file="${LIB_DIR}/execute-scripts.sh"
 
@@ -276,25 +314,34 @@ main() {
     # Step 3 — Create pre-sync snapshot (Issue #42)
     phase_snapshot
 
-    # Step 4 — Git clone / pull
+    # Step 4 — Record pre-sync checksums for conflict detection (Issue #43)
+    phase_conflict_pre_sync
+
+    # Step 5 — Git clone / pull
     git_sync || exit $?
 
-    # Step 5 — Validate repo structure
+    # Step 6 — Detect conflicts between local changes and git updates (Issue #43)
+    phase_conflict_detect || exit $?
+
+    # Step 7 — Validate repo structure
     validate_repo
 
-    # Step 6 — Execute scripts (Issue #41)
+    # Step 8 — Execute scripts (Issue #41)
     phase_execute_scripts
 
-    # Step 7 — Process files (Issue #40)
+    # Step 9 — Process files (Issue #40)
     phase_process_files
 
-    # Step 8 — Install packages (future — Issue #44/#45)
+    # Step 10 — Install packages (future — Issue #44/#45)
     phase_install_packages
 
-    # Step 9 — Mark snapshot as good and cleanup old snapshots
+    # Step 11 — Save post-sync checksums for next conflict detection (Issue #43)
+    phase_conflict_post_success
+
+    # Step 12 — Mark snapshot as good and cleanup old snapshots
     phase_snapshot_post_success
 
-    # Step 10 — Summary
+    # Step 13 — Summary
     log_summary
 
     log_info "config-sync completed successfully."
