@@ -273,7 +273,32 @@ phase_process_files() {
 }
 
 phase_install_packages() {
-    log_info "[Phase: Packages] Not yet implemented — see Issue #44/#45 (Cross-distribution & custom package management)."
+    local handler_common="${LIB_DIR}/package-handlers/handler-common.sh"
+
+    if [[ ! -f "$handler_common" ]]; then
+        log_warn "[Phase: Packages] handler-common.sh not found at ${handler_common} — skipping."
+        return 0
+    fi
+
+    # shellcheck source=/dev/null
+    source "$handler_common"
+
+    # Source helpers if not already loaded (provides detect_package_manager, detect_container_os)
+    local helpers_script="${LIB_DIR}/config-manager-helpers.sh"
+    if [[ -f "$helpers_script" ]] && ! declare -f detect_package_manager &>/dev/null; then
+        # shellcheck source=/dev/null
+        source "$helpers_script"
+    fi
+
+    # Run package installation
+    local packages_dir="${REPO_DIR}/${CONFIG_PATH}/packages"
+    log_info "[Phase: Packages] Processing packages from ${packages_dir}"
+
+    if declare -f install_packages &>/dev/null; then
+        install_packages "$packages_dir"
+    else
+        log_error "[Phase: Packages] install_packages function not found — skipping."
+    fi
 }
 
 # ---------------------------------------------------------------------------
