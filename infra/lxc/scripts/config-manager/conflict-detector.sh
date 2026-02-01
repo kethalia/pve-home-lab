@@ -40,6 +40,9 @@ readonly CHECKSUMS_CURRENT="${CONFLICT_STATE_DIR}/checksums.current"
 readonly CONFLICTS_LOG="${CONFLICT_STATE_DIR}/conflicts.log"
 readonly CONFLICT_MARKER="/var/lib/config-manager/CONFLICT"
 
+# Exit codes
+readonly EXIT_CONFLICT=5
+
 # ---------------------------------------------------------------------------
 # Logging — provide stubs when not sourced from config-sync.sh
 # ---------------------------------------------------------------------------
@@ -111,9 +114,20 @@ compute_checksums() {
         local source_hash
 
         source_hash="$(_conflict_checksum "$source_file")"
+        
+        # Validate source checksum was computed successfully
+        if [[ -z "$source_hash" ]]; then
+            log_warn "[Conflict] Could not compute checksum for $source_file — skipping"
+            continue
+        fi
 
         if [[ -f "$target_file" ]]; then
             target_hash="$(_conflict_checksum "$target_file")"
+            # If target exists but checksum fails, treat as changed to be safe
+            if [[ -z "$target_hash" ]]; then
+                log_warn "[Conflict] Could not compute checksum for $target_file — marking as changed"
+                target_hash="CHECKSUM_FAILED"
+            fi
         fi
 
         printf '%s\t%s\t%s\n' "$target_file" "$target_hash" "$source_hash" >> "$output_file"
@@ -179,6 +193,8 @@ detect_conflicts() {
 
     while IFS=$'\t' read -r path target_hash source_hash; do
         [[ -z "$path" ]] && continue
+        [[ -z "$target_hash" ]] && continue
+        [[ -z "$source_hash" ]] && continue
         prev_target_checksums["$path"]="$target_hash"
         prev_source_checksums["$path"]="$source_hash"
     done < "$CHECKSUMS_PREV"
@@ -187,6 +203,7 @@ detect_conflicts() {
 
     while IFS=$'\t' read -r path target_hash _source_hash; do
         [[ -z "$path" ]] && continue
+        [[ -z "$target_hash" ]] && continue
         current_target_checksums["$path"]="$target_hash"
     done < "$CHECKSUMS_CURRENT"
 
@@ -214,6 +231,12 @@ detect_conflicts() {
         # Get the new source checksum (after git pull)
         local new_source_hash
         new_source_hash="$(_conflict_checksum "$source_file")"
+        
+        # Skip if checksum computation failed
+        if [[ -z "$new_source_hash" ]]; then
+            log_warn "[Conflict] Could not compute checksum for $source_file — skipping conflict check"
+            continue
+        fi
 
         # Get previous checksums (from last successful sync)
         local prev_source="${prev_source_checksums[$target_path]:-}"
@@ -246,7 +269,7 @@ detect_conflicts() {
         if [[ "$git_changed" == true ]] && [[ "$locally_modified" == true ]]; then
             (( conflict_count++ )) || true
 
-            # Log conflict details
+            # Log conflict details to conflicts.log
             {
                 printf '\n  %s\n' "$target_path"
                 printf '    Local checksum:  %s\n' "$current_target"
@@ -254,19 +277,18 @@ detect_conflicts() {
                 printf '    Git incoming:    %s\n' "$new_source_hash"
             } >> "$CONFLICTS_LOG"
 
-            log_warn "[Conflict] CONFLICT: $target_path"
-            log_warn "  Local:    $current_target"
-            log_warn "  Expected: $prev_target"
-            log_warn "  Incoming: $new_source_hash"
+            # Log to info level with compact format — full details in conflicts.log
+            log_info "[Conflict] CONFLICT detected: $target_path (local: ${current_target:0:8}..., expected: ${prev_target:0:8}..., incoming: ${new_source_hash:0:8}...)"
         fi
     done
 
-    log_info "[Conflict] Checked $checked_count file(s), found $conflict_count conflict(s)."
-
     if [[ $conflict_count -gt 0 ]]; then
+        log_warn "[Conflict] Checked $checked_count file(s), found $conflict_count conflict(s) — see $CONFLICTS_LOG for details"
         _handle_conflicts "$conflict_count"
-        return 5
+        return $EXIT_CONFLICT
     fi
+    
+    log_info "[Conflict] Checked $checked_count file(s), no conflicts detected."
 
     # Clean up any stale conflict marker from a previous run
     if [[ -f "$CONFLICT_MARKER" ]]; then

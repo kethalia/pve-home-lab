@@ -373,11 +373,28 @@ cmd_restore() {
     local rc=0
     case "$DETECTED_BACKEND" in
         zfs)
-            if declare -f zfs_rollback &>/dev/null; then
-                zfs_rollback "$snapshot_name" || rc=$?
+            # Verify snapshot exists in ZFS before attempting restore
+            if [[ -n "${ZFS_DATASET:-}" ]]; then
+                if ! zfs list -t snapshot "${ZFS_DATASET}@${snapshot_name}" &>/dev/null; then
+                    warn "Snapshot $snapshot_name not found in ZFS — trying file-level fallback..."
+                    DETECTED_BACKEND="none"
+                fi
+            fi
+            
+            if [[ "$DETECTED_BACKEND" == "zfs" ]]; then
+                if declare -f zfs_rollback &>/dev/null; then
+                    zfs_rollback "$snapshot_name" || rc=$?
+                else
+                    error "ZFS rollback function not available."
+                    rc=3
+                fi
             else
-                error "ZFS rollback function not available."
-                rc=3
+                # Fall through to file-level restore
+                if declare -f fallback_rollback &>/dev/null; then
+                    fallback_rollback "$snapshot_name" || rc=$?
+                else
+                    _inline_fallback_restore "$snapshot_name" || rc=$?
+                fi
             fi
             ;;
         lvm)
@@ -389,11 +406,27 @@ cmd_restore() {
             fi
             ;;
         btrfs)
-            if declare -f btrfs_rollback &>/dev/null; then
-                btrfs_rollback "$snapshot_name" || rc=$?
+            # Verify snapshot exists in BTRFS before attempting restore
+            local snap_path="/.snapshots/${snapshot_name}"
+            if [[ ! -d "$snap_path" ]]; then
+                warn "Snapshot $snapshot_name not found in BTRFS — trying file-level fallback..."
+                DETECTED_BACKEND="none"
+            fi
+            
+            if [[ "$DETECTED_BACKEND" == "btrfs" ]]; then
+                if declare -f btrfs_rollback &>/dev/null; then
+                    btrfs_rollback "$snapshot_name" || rc=$?
+                else
+                    error "BTRFS rollback function not available."
+                    rc=3
+                fi
             else
-                error "BTRFS rollback function not available."
-                rc=3
+                # Fall through to file-level restore
+                if declare -f fallback_rollback &>/dev/null; then
+                    fallback_rollback "$snapshot_name" || rc=$?
+                else
+                    _inline_fallback_restore "$snapshot_name" || rc=$?
+                fi
             fi
             ;;
         none|*)
@@ -408,6 +441,22 @@ cmd_restore() {
 
     if [[ $rc -eq 0 ]]; then
         printf "\n${GREEN}Restore completed successfully.${RESET}\n"
+
+        # Recompute checksums to reflect restored state
+        local detector="${LIB_DIR}/conflict-detector.sh"
+        if [[ -f "$detector" ]] && [[ -f "$CONFIG_FILE" ]]; then
+            # shellcheck source=/dev/null
+            source "$CONFIG_FILE"
+            REPO_DIR="${REPO_DIR:-/opt/config-manager/repo}"
+            CONFIG_PATH="${CONFIG_PATH:-infra/lxc/container-configs}"
+            export REPO_DIR CONFIG_PATH
+
+            # shellcheck source=/dev/null
+            source "$detector"
+            compute_checksums "$CHECKSUMS_PREV"
+            info "Checksums updated after restore."
+            printf "${GREEN}Checksums updated.${RESET}\n"
+        fi
 
         # Clear conflict state after successful restore
         if [[ -f "$CONFLICT_MARKER" ]]; then
