@@ -11,6 +11,7 @@
 #   2  — lock acquisition failed (another instance running)
 #   3  — configuration error (missing / invalid config)
 #   4  — git operation failed (and no cached state available)
+#   5  — conflicts detected between local changes and git updates
 
 set -euo pipefail
 
