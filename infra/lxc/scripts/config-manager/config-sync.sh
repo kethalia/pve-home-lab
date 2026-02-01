@@ -234,7 +234,7 @@ phase_conflict_detect() {
     if ! detect_conflicts; then
         log_error "[Phase: Conflict] Conflicts detected — aborting sync."
         log_error "[Phase: Conflict] Run 'config-rollback status' for details."
-        return 5
+        return $EXIT_CONFLICT
     fi
 
     log_info "[Phase: Conflict] No conflicts detected — proceeding with sync."

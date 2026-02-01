@@ -26,10 +26,14 @@ set -euo pipefail
 readonly VERSION="0.1.0"
 readonly CONFIG_FILE="/etc/config-manager/config.env"
 readonly STATE_DIR="/var/lib/config-manager"
-readonly CONFLICT_MARKER="${STATE_DIR}/CONFLICT"
-readonly CONFLICT_STATE_DIR="${STATE_DIR}/state"
-readonly CONFLICTS_LOG="${CONFLICT_STATE_DIR}/conflicts.log"
-readonly CHECKSUMS_PREV="${CONFLICT_STATE_DIR}/checksums.prev"
+
+# These are NOT readonly here to avoid collision when sourcing conflict-detector.sh
+# (which declares them as readonly). They will be promoted to readonly when sourced.
+CONFLICT_MARKER="${STATE_DIR}/CONFLICT"
+CONFLICT_STATE_DIR="${STATE_DIR}/state"
+CONFLICTS_LOG="${CONFLICT_STATE_DIR}/conflicts.log"
+CHECKSUMS_PREV="${CONFLICT_STATE_DIR}/checksums.prev"
+
 readonly SNAPSHOT_STATE_FILE="${STATE_DIR}/snapshot-state"
 readonly BACKUP_DIR="${STATE_DIR}/backups"
 readonly LIB_DIR="/usr/local/lib/config-manager"
