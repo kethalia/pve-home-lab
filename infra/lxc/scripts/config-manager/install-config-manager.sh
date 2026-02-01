@@ -194,6 +194,7 @@ install_files() {
         "execute-scripts.sh"
         "process-files.sh"
         "snapshot-manager.sh"
+        "conflict-detector.sh"
     )
 
     for lib_file in "${lib_files[@]}"; do
@@ -205,6 +206,15 @@ install_files() {
             warn "Optional library not found: ${script_dir}/${lib_file} — skipping."
         fi
     done
+
+    # Copy config-rollback CLI tool
+    if [[ -f "${script_dir}/config-rollback.sh" ]]; then
+        info "Installing config-rollback -> /usr/local/bin/config-rollback ..."
+        cp "${script_dir}/config-rollback.sh" /usr/local/bin/config-rollback
+        chmod 755 /usr/local/bin/config-rollback
+    else
+        warn "config-rollback.sh not found — rollback CLI will not be available."
+    fi
 
     # Copy systemd service
     info "Installing systemd service ..."
@@ -257,6 +267,8 @@ $(printf '\033[1;32m')========================================
     3. Check logs:    journalctl -u config-manager
     4. View sync log: cat /var/log/config-manager/sync.log
     5. Snapshot status: /usr/local/lib/config-manager/snapshot-manager.sh status
+    6. Conflict status: config-rollback status
+    7. List snapshots:  config-rollback list
 
 EOF
 }
