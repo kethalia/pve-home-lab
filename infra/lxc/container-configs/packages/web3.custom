@@ -7,5 +7,7 @@
 
 # Foundry — Ethereum development toolkit (forge, cast, anvil, chisel)
 # Requires: curl, bash
-# Note: Needs shell restart or source ~/.bashrc after install for PATH update
-foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && source ~/.bashrc && foundryup|600
+# Note: The installer modifies ~/.bashrc. After installation, foundry will be
+#       available in new shells. The verification may fail on first run but
+#       will succeed after container restart or manual shell reload.
+foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && foundryup|600

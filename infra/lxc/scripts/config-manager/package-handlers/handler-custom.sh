@@ -229,13 +229,25 @@ custom_parse_and_install() {
     log_info "  ─────────────────────────────────────"
     log_info "  Custom package summary for ${file_name}:"
     log_info "  - Installed: ${#installed_tools[@]} tool(s)"
-    [[ ${#installed_tools[@]} -gt 0 ]] && log_info "    ${installed_tools[*]}"
+    if [[ ${#installed_tools[@]} -gt 0 ]]; then
+        for tool in "${installed_tools[@]}"; do
+            log_info "    - ${tool}"
+        done
+    fi
     
     log_info "  - Skipped: ${#skipped_tools[@]} tool(s) (already installed)"
-    [[ ${#skipped_tools[@]} -gt 0 ]] && log_info "    ${skipped_tools[*]}"
+    if [[ ${#skipped_tools[@]} -gt 0 ]]; then
+        for tool in "${skipped_tools[@]}"; do
+            log_info "    - ${tool}"
+        done
+    fi
     
     log_info "  - Failed: ${#failed_tools[@]} tool(s)"
-    [[ ${#failed_tools[@]} -gt 0 ]] && log_info "    ${failed_tools[*]}"
+    if [[ ${#failed_tools[@]} -gt 0 ]]; then
+        for tool in "${failed_tools[@]}"; do
+            log_info "    - ${tool}"
+        done
+    fi
     log_info "  ─────────────────────────────────────"
     
     # Update global counters if they exist (from handler-common.sh)
