@@ -1,0 +1,11 @@
+# Web3 Development Tools
+#
+# Custom installations for blockchain development tools that require
+# non-standard installation methods.
+#
+# Format: name|check_command|install_command[|timeout_seconds]
+
+# Foundry — Ethereum development toolkit (forge, cast, anvil, chisel)
+# Requires: curl, bash
+# Note: Needs shell restart or source ~/.bashrc after install for PATH update
+foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && source ~/.bashrc && foundryup|600

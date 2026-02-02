@@ -13,6 +13,7 @@ Package files use the extension to indicate the target package manager:
 | `.dnf` | DNF/YUM | Fedora, RHEL, CentOS, Rocky, AlmaLinux |
 | `.npm` | NPM (global) | Cross-distribution (requires Node.js) |
 | `.pip` | PIP | Cross-distribution (requires Python) |
+| `.custom` | Custom installers | Cross-distribution (curl/wget-based, build-from-source) |
 
 ## File Format
 
@@ -109,8 +110,95 @@ Package installation runs **after** file deployment and script execution, so:
 - Files can configure package sources (e.g., `/etc/apt/sources.list.d/`)
 - Installed packages are available for subsequent container usage
 
+## Custom Package Installation
+
+For tools that cannot be installed through standard package managers (e.g., Foundry, act, NVM), use `.custom` files with pipe-delimited format.
+
+### Format
+
+```bash
+# Format: name|check_command|install_command[|timeout_seconds]
+#
+# Fields:
+#   - name:            Human-readable tool name
+#   - check_command:   Command that returns 0 if already installed
+#   - install_command: Command to run for installation
+#   - timeout_seconds: (Optional) Timeout in seconds (default: 300)
+
+# Example: Foundry with 10-minute timeout
+foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && foundryup|600
+
+# Example: GitHub CLI (no custom timeout, uses default 300s)
+gh-cli|command -v gh|curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | ...
+```
+
+### Example Files
+
+**`web3.custom`:**
+```bash
+# Web3 development tools
+foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && foundryup|600
+```
+
+**`cli.custom`:**
+```bash
+# CLI tools
+act|command -v act|curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | bash
+```
+
+**`node.custom`:**
+```bash
+# Node.js ecosystem
+nvm|[ -d "$HOME/.nvm" ]|curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash|240
+pnpm|command -v pnpm|npm install -g pnpm
+```
+
+### Processing Logic
+
+1. **Parse Format**: Reads each line, splits by pipe delimiter (`|`)
+2. **Validate Fields**: Ensures name, check command, and install command are present
+3. **Check Installed**: Runs check command — if exit code 0, skips (already installed)
+4. **Install with Timeout**: Executes install command with timeout enforcement
+5. **Verify**: Runs check command again to confirm successful installation
+6. **Continue on Failure**: Failed installs don't block remaining tools
+
+### Security Considerations
+
+**✓ Safe Practices:**
+- Scripts come from trusted git repository (version controlled)
+- All commands are logged before execution
+- Timeouts prevent hanging installations
+- Failed installations don't abort entire sync
+
+**⚠️ Important Notes:**
+- Only add install commands from **trusted sources** (official documentation, verified install scripts)
+- Review curl/wget URLs carefully — ensure they point to official repositories
+- Use HTTPS URLs when possible for security
+- Test custom installations in a safe environment first
+- Some tools may require shell restart or sourcing profile files (e.g., `source ~/.bashrc`)
+
+### Timeout Configuration
+
+Default timeout is **5 minutes (300 seconds)** per tool. Adjust for:
+
+- **Short timeouts (30-120s)**: Small downloads, npm global installs
+- **Medium timeouts (300-600s)**: Curl-based installers, GitHub releases
+- **Long timeouts (600-900s)**: Build-from-source, large downloads (Foundry, Rust toolchains)
+
+Example:
+```bash
+# Quick npm install (30 seconds)
+pnpm|command -v pnpm|npm install -g pnpm|30
+
+# Foundry install (10 minutes)
+foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && foundryup|600
+```
+
 ## Troubleshooting
 
 - **No packages installed**: Check the sync log at `/var/log/config-manager/sync.log`
 - **Failed installations**: Review error messages in the log — common issues include network problems or missing repositories
 - **Cross-distro packages skipped**: Ensure npm/pip are installed (add them to native package files first)
+- **Custom install timeout**: Increase timeout value (4th field) if installation legitimately takes longer
+- **Custom install verification failed**: Tool may require shell restart, manual PATH update, or additional configuration
+- **Custom install syntax error**: Ensure exactly 3 or 4 fields separated by single pipe (`|`) characters

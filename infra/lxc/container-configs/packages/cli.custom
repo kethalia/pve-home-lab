@@ -1,0 +1,16 @@
+# CLI Development Tools
+#
+# Custom installations for command-line tools that require non-standard
+# installation methods (curl-based installers, build scripts, etc.).
+#
+# Format: name|check_command|install_command[|timeout_seconds]
+
+# GitHub CLI — Official GitHub command-line tool
+# Requires: curl, gnupg, apt (Debian/Ubuntu)
+# Note: This example is Debian/Ubuntu specific. For other distros, adjust the install command.
+gh-cli|command -v gh|curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && apt-get update && apt-get install -y gh|300
+
+# act — Run GitHub Actions locally
+# Requires: curl, bash
+# Install location: /usr/local/bin/act
+act|command -v act|curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | bash

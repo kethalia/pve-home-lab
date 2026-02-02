@@ -326,6 +326,49 @@ _process_cross_distro_packages() {
 }
 
 # ---------------------------------------------------------------------------
+# _process_custom_packages <packages_dir>
+#
+# Processes custom package files (*.custom) that define non-standard
+# installation methods (curl-based installers, build-from-source, etc.).
+#
+# Each .custom file uses pipe-delimited format:
+#   name|check_command|install_command[|timeout_seconds]
+# ---------------------------------------------------------------------------
+_process_custom_packages() {
+    local packages_dir="$1"
+    
+    # Discover all *.custom files
+    local -a custom_files=()
+    while IFS= read -r -d '' f; do
+        custom_files+=("$f")
+    done < <(find "$packages_dir" -maxdepth 1 -name "*.custom" -type f -print0 2>/dev/null | sort -z)
+    
+    if [[ ${#custom_files[@]} -eq 0 ]]; then
+        return 0
+    fi
+    
+    # Source the handler
+    if ! _source_handler "custom"; then
+        log_warn "Handler for .custom files not available — skipping."
+        return 0
+    fi
+    
+    # Process each custom file
+    for custom_file in "${custom_files[@]}"; do
+        local custom_file_name
+        custom_file_name="$(basename "$custom_file")"
+        log_info "Processing custom package file: ${custom_file_name}"
+        
+        if declare -f custom_parse_and_install &>/dev/null; then
+            # custom_parse_and_install handles its own logging and counter updates
+            custom_parse_and_install "$custom_file" || true  # Continue on failure
+        else
+            log_error "custom_parse_and_install function not found — skipping ${custom_file_name}"
+        fi
+    done
+}
+
+# ---------------------------------------------------------------------------
 # install_packages <packages_dir> — main entry point
 #
 # Orchestrates the full package installation phase:
@@ -333,7 +376,8 @@ _process_cross_distro_packages() {
 #   2. Ensures OS and package manager are detected
 #   3. Processes native package files (*.<pkg_mgr>)
 #   4. Processes cross-distro files (*.npm, *.pip)
-#   5. Logs a summary
+#   5. Processes custom installation files (*.custom)
+#   6. Logs a summary
 # ---------------------------------------------------------------------------
 install_packages() {
     local packages_dir="${1:-}"
@@ -381,7 +425,10 @@ install_packages() {
         _process_cross_distro_packages "$packages_dir" "$ext"
     done
 
-    # Step 3: Summary
+    # Step 3: Process custom packages
+    _process_custom_packages "$packages_dir"
+
+    # Step 4: Summary
     log_info "Package installation complete — installed: ${_PKG_INSTALLED}, skipped: ${_PKG_SKIPPED}, failed: ${_PKG_FAILED}"
 
     if [[ $_PKG_FAILED -gt 0 ]]; then
