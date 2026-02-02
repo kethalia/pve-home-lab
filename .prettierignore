@@ -3,3 +3,6 @@ node_modules
 .source
 pnpm-lock.yaml
 *.md
+*.sh
+*.custom
+infra/lxc/
