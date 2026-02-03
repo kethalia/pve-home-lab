@@ -1,0 +1,22 @@
+# Development Tools
+# Additional packages for full-stack Web3 development beyond base system packages
+
+# Python development
+python3
+python3-pip
+python3-venv
+
+# System utilities
+rsync          # Fast file synchronization
+htop           # Interactive process viewer
+jq             # JSON processor for command-line
+tree           # Directory tree visualization
+ncdu           # Disk usage analyzer (NCurses)
+
+# Network tools
+net-tools      # Network configuration tools (ifconfig, netstat)
+dnsutils       # DNS utilities (dig, nslookup)
+
+# Additional development utilities
+tmux           # Terminal multiplexer
+zip            # Compression utility

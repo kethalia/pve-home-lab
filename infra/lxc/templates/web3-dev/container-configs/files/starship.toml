@@ -1,0 +1,77 @@
+# Starship prompt configuration for Web3 development container
+# See https://starship.rs/config/ for full documentation
+
+# Format
+format = """
+[┌───────────────────>](bold green)
+[│](bold green)$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$nodejs\
+$rust\
+$python\
+$docker_context
+[└─>](bold green) """
+
+# Prompt character
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[➜](bold red)"
+
+# Username
+[username]
+show_always = true
+format = "[$user]($style) "
+style_user = "bold yellow"
+style_root = "bold red"
+
+# Hostname
+[hostname]
+ssh_only = false
+format = "[@$hostname]($style) "
+style = "bold blue"
+
+# Directory
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+format = "[$path]($style)[$read_only]($read_only_style) "
+style = "bold cyan"
+
+# Git branch
+[git_branch]
+format = "[$symbol$branch]($style) "
+symbol = " "
+style = "bold purple"
+
+# Git status
+[git_status]
+format = '([\[$all_status$ahead_behind\]]($style) )'
+style = "bold red"
+
+# Node.js
+[nodejs]
+format = "[$symbol($version )]($style)"
+symbol = " "
+style = "bold green"
+
+# Rust
+[rust]
+format = "[$symbol($version )]($style)"
+symbol = " "
+style = "bold red"
+
+# Python
+[python]
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+symbol = " "
+style = "bold yellow"
+
+# Docker
+[docker_context]
+format = "[$symbol$context]($style) "
+symbol = " "
+style = "bold blue"
+only_with_files = true
