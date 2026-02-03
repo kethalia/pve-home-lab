@@ -31,44 +31,43 @@ if [[ -z "${CONFIG_PATH}" ]]; then
 fi
 
 msg_info "Installing config-manager service"
-INSTALL_SCRIPT="$(mktemp -t install-config-manager.XXXXXX.sh)"
 
-# Download the config-manager installer from repository
-if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
-    "https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/config-manager/install-config-manager.sh" \
-    -o "${INSTALL_SCRIPT}"; then
-  msg_error "Failed to download config-manager installer"
-  rm -f "${INSTALL_SCRIPT}"
+# Create temp directory for repo clone
+TEMP_REPO_DIR="$(mktemp -d -t pve-home-lab-XXXXXX)"
+trap 'rm -rf "${TEMP_REPO_DIR}"' EXIT
+
+# Clone the repository
+msg_info "Cloning configuration repository"
+if ! git clone --depth 1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${TEMP_REPO_DIR}" &>/dev/null; then
+  msg_error "Failed to clone repository: ${REPO_URL}"
   exit 1
 fi
 
-# Verify that the installer script was successfully obtained
-if [[ ! -f "${INSTALL_SCRIPT}" ]] || [[ ! -s "${INSTALL_SCRIPT}" ]]; then
-  msg_error "Config-manager installer is empty or missing"
-  rm -f "${INSTALL_SCRIPT}"
+# Navigate to config-manager directory and run installer
+INSTALLER_PATH="${TEMP_REPO_DIR}/infra/lxc/scripts/config-manager/install-config-manager.sh"
+
+if [[ ! -f "${INSTALLER_PATH}" ]]; then
+  msg_error "Config-manager installer not found at: ${INSTALLER_PATH}"
   exit 1
 fi
 
-if ! chmod +x "${INSTALL_SCRIPT}"; then
+if ! chmod +x "${INSTALLER_PATH}"; then
   msg_error "Failed to make installer executable"
-  rm -f "${INSTALL_SCRIPT}"
   exit 1
 fi
 
 # Install and run config-manager
 # All template-specific setup will be handled by container-configs/
 msg_info "Running config-manager with template configuration"
-if ! bash "${INSTALL_SCRIPT}" \
+if ! bash "${INSTALLER_PATH}" \
   --repo-url "${REPO_URL}" \
   --branch "${REPO_BRANCH}" \
   --config-path "${CONFIG_PATH}" \
   --run; then
   msg_error "Config-manager installation failed"
-  rm -f "${INSTALL_SCRIPT}"
   exit 1
 fi
 
-rm -f "${INSTALL_SCRIPT}"
 msg_ok "Config-manager installed and initial sync completed"
 
 # ProxmoxVE standard finalizations
