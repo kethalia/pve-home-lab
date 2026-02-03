@@ -35,6 +35,39 @@ source_logging_stubs
 # Constants
 # ---------------------------------------------------------------------------
 readonly DEFAULT_TIMEOUT=300  # 5 minutes default timeout
+readonly MIN_TIMEOUT=30       # Minimum recommended timeout (30 seconds)
+readonly CHECK_TIMEOUT=30     # Timeout for check commands
+
+# ---------------------------------------------------------------------------
+# _validate_command_safety <command> — basic command injection detection
+#
+# Performs basic validation to detect potentially unsafe command patterns.
+# Returns 0 if command appears safe, 1 if suspicious patterns detected.
+#
+# Note: This is NOT a comprehensive security solution. .custom files should
+#       be treated as executable code and reviewed carefully in PRs.
+# ---------------------------------------------------------------------------
+_validate_command_safety() {
+    local cmd="$1"
+    
+    # Log warning for commands with potential injection vectors
+    # We allow these patterns since they're legitimate in install scripts,
+    # but we want visibility for security review
+    if [[ "$cmd" =~ \$\(.*\) ]]; then
+        log_info "  Command contains command substitution \$(...)  — ensure this is intentional"
+    fi
+    if [[ "$cmd" =~ \`.*\` ]]; then
+        log_warn "  Command contains backticks \`...\` — ensure this is intentional"
+    fi
+    
+    # Detect obviously malicious patterns
+    if [[ "$cmd" =~ rm[[:space:]]+-rf[[:space:]]+/ ]] || [[ "$cmd" =~ rm[[:space:]]+-rf[[:space:]]+/\* ]]; then
+        log_error "  Potentially destructive command detected: rm -rf /"
+        return 1
+    fi
+    
+    return 0
+}
 
 # ---------------------------------------------------------------------------
 # custom_is_available — always returns 0 (custom installations are always "available" to try)
@@ -75,6 +108,11 @@ _validate_custom_line() {
         return 1
     fi
     
+    # Warn if timeout is very low
+    if [[ -n "$timeout_val" ]] && [[ "$timeout_val" -lt "$MIN_TIMEOUT" ]]; then
+        log_warn "Timeout value '$timeout_val' for '$name' is very low — minimum recommended: ${MIN_TIMEOUT}s"
+    fi
+    
     return 0
 }
 
@@ -93,9 +131,35 @@ _run_with_timeout() {
         timeout "$timeout_seconds" bash -c "$command"
         return $?
     else
-        # Fallback: run without timeout (log warning)
-        log_warn "timeout command not available — running without timeout enforcement"
-        bash -c "$command"
+        # Fallback: pure-bash timeout implementation
+        log_warn "timeout command not available — using bash-based timeout"
+        
+        # Start command in background
+        bash -c "$command" &
+        local pid=$!
+        local count=0
+        
+        # Wait for process with timeout
+        while kill -0 $pid 2>/dev/null && [[ $count -lt $timeout_seconds ]]; do
+            sleep 1
+            ((count++))
+        done
+        
+        # Check if process is still running (timed out)
+        if kill -0 $pid 2>/dev/null; then
+            # Timeout occurred - kill the process
+            kill -TERM $pid 2>/dev/null
+            sleep 2
+            # Force kill if still running
+            if kill -0 $pid 2>/dev/null; then
+                kill -KILL $pid 2>/dev/null
+            fi
+            wait $pid 2>/dev/null || true
+            return 124  # timeout exit code
+        fi
+        
+        # Process completed - get exit code
+        wait $pid
         return $?
     fi
 }
@@ -118,6 +182,11 @@ custom_parse_and_install() {
     
     if [[ ! -f "$file" ]]; then
         log_warn "Custom package file not found: $file"
+        return 1
+    fi
+    
+    if [[ ! -r "$file" ]]; then
+        log_error "Custom package file is not readable: $file"
         return 1
     fi
     
@@ -155,11 +224,23 @@ custom_parse_and_install() {
         IFS='|' read -r name check_cmd install_cmd timeout_val <<< "$line"
         timeout_val="${timeout_val:-$DEFAULT_TIMEOUT}"
         
+        # Validate command safety
+        if ! _validate_command_safety "$check_cmd"; then
+            log_error "  [${name}] Check command failed safety validation — skipping"
+            failed_tools+=("${name} (unsafe check command)")
+            continue
+        fi
+        if ! _validate_command_safety "$install_cmd"; then
+            log_error "  [${name}] Install command failed safety validation — skipping"
+            failed_tools+=("${name} (unsafe install command)")
+            continue
+        fi
+        
         # Step 1: Check if already installed
         log_info "  [${name}] Checking if already installed..."
         log_info "  [${name}] Running check: ${check_cmd}"
         
-        if bash -c "$check_cmd" &>/dev/null; then
+        if _run_with_timeout "$CHECK_TIMEOUT" "$check_cmd" &>/dev/null; then
             log_info "  [${name}] Already installed — skipping"
             skipped_tools+=("$name")
             continue
@@ -183,7 +264,7 @@ custom_parse_and_install() {
         # Log installation output (truncate if too long)
         if [[ -n "$install_output" ]]; then
             local output_line_count
-            output_line_count=$(echo "$install_output" | wc -l)
+            output_line_count=$(printf '%s\n' "$install_output" | wc -l)
             
             if [[ $output_line_count -gt 10 ]]; then
                 # Show first 5 and last 5 lines
@@ -214,7 +295,7 @@ custom_parse_and_install() {
         
         # Step 3: Verify installation
         log_info "  [${name}] Verifying installation..."
-        if bash -c "$check_cmd" &>/dev/null; then
+        if _run_with_timeout "$CHECK_TIMEOUT" "$check_cmd" &>/dev/null; then
             log_info "  [${name}] ✓ Successfully installed and verified"
             installed_tools+=("$name")
         else

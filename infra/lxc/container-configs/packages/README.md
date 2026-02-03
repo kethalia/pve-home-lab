@@ -170,17 +170,30 @@ pnpm|command -v pnpm|npm install -g pnpm
 **✓ Safe Practices:**
 
 - Scripts come from trusted git repository (version controlled)
-- All commands are logged before execution
-- Timeouts prevent hanging installations
+- All commands are logged before execution for auditability
+- Timeouts prevent hanging installations (both install and check commands)
 - Failed installations don't abort entire sync
+- Basic command safety validation detects obviously malicious patterns
 
 **⚠️ Important Notes:**
 
+- **CRITICAL**: Treat `.custom` files as executable code — review them carefully in PRs
 - Only add install commands from **trusted sources** (official documentation, verified install scripts)
 - Review curl/wget URLs carefully — ensure they point to official repositories
 - Use HTTPS URLs when possible for security
 - Test custom installations in a safe environment first
 - Some tools may require shell restart or sourcing profile files (e.g., `source ~/.bashrc`)
+- Commands are executed with `bash -c` — ensure proper quoting and escaping
+
+**🔒 Code Review Checklist for `.custom` Files:**
+
+When reviewing PRs that add or modify `.custom` files:
+
+1. Verify URLs point to official, trusted sources
+2. Check for suspicious patterns (e.g., unexpected `rm -rf`, strange redirects)
+3. Ensure HTTPS is used for downloads
+4. Validate timeout values are reasonable (30s minimum recommended)
+5. Test installations in an isolated environment if possible
 
 ### Timeout Configuration
 
@@ -190,6 +203,8 @@ Default timeout is **5 minutes (300 seconds)** per tool. Adjust for:
 - **Medium timeouts (300-600s)**: Curl-based installers, GitHub releases
 - **Long timeouts (600-900s)**: Build-from-source, large downloads (Foundry, Rust toolchains)
 
+**Note:** Minimum recommended timeout is 30 seconds. Lower values will generate warnings.
+
 Example:
 
 ```bash
@@ -198,6 +213,39 @@ pnpm|command -v pnpm|npm install -g pnpm|30
 
 # Foundry install (10 minutes)
 foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && foundryup|600
+```
+
+### Special Characters and Escaping
+
+**Pipe Character Limitation:**
+
+The pipe character (`|`) is used as the field delimiter and **cannot** appear in your commands. If your install command requires literal pipe characters for shell piping, you have two options:
+
+1. **Recommended**: Create a helper script and call it from the .custom file
+2. **Alternative**: Chain commands using `&&` instead of pipes where possible
+
+**Example:**
+
+Instead of:
+
+```bash
+# This won't work - pipe inside install command
+tool|command -v tool|curl -L https://example.com/install.sh | bash
+```
+
+Use:
+
+```bash
+# Option 1: Commands already use pipe correctly (pipe is between fields, not inside)
+tool|command -v tool|curl -L https://example.com/install.sh | bash
+
+# Option 2: Create a helper script
+# In files/install-tool.sh:
+#!/bin/bash
+curl -L https://example.com/data.tar.gz | tar xz && mv tool /usr/local/bin/
+
+# In .custom file:
+tool|command -v tool|/path/to/install-tool.sh
 ```
 
 ## Troubleshooting
