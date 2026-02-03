@@ -59,21 +59,8 @@ if [ -f ~/.config/aliases.sh ]; then
     . ~/.config/aliases.sh
 fi
 
-# NVM (Node Version Manager)
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# NPM global binaries
-export PATH="$HOME/.npm-global/bin:$PATH"
-
-# Foundry
-export PATH="$HOME/.foundry/bin:$PATH"
-
-# Starship prompt (overrides PS1 above)
-if command -v starship >/dev/null 2>&1; then
-    eval "$(starship init bash)"
-fi
+# Tool-specific configuration (NVM, Foundry, Starship) is added by setup scripts
+# Scripts append to .bashrc during installation to ensure proper PATH and initialization
 
 # Enable bash completion
 if ! shopt -oq posix; then
