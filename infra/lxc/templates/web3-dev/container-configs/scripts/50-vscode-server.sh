@@ -277,6 +277,82 @@ EOF
 }
 
 # ============================================================================
+# opencode (Alternative web-based code editor)
+# ============================================================================
+
+install_opencode() {
+    log_info "Installing opencode (web-based code editor)..."
+    
+    # Check if opencode is already installed
+    if sudo -u "$CONTAINER_USER" bash -c "command -v opencode" >/dev/null 2>&1; then
+        log_info "opencode is already installed"
+        
+        # Verify service is running
+        if systemctl is-active opencode@"$CONTAINER_USER" >/dev/null 2>&1; then
+            log_info "✓ opencode service is running"
+        else
+            log_info "Starting opencode service..."
+            systemctl start opencode@"$CONTAINER_USER"
+        fi
+        
+        return 0
+    fi
+    
+    # Install opencode via official installer
+    log_info "Downloading opencode installer..."
+    
+    # Run as the container user
+    sudo -u "$CONTAINER_USER" bash -c "
+        curl -fsSL https://raw.githubusercontent.com/coder/opencode/main/install.sh | sh
+    "
+    
+    # Add opencode to PATH
+    OPENCODE_PATH="/home/${CONTAINER_USER}/.opencode/bin"
+    
+    # Verify installation
+    if [[ ! -d "$OPENCODE_PATH" ]] || ! sudo -u "$CONTAINER_USER" bash -c "export PATH='$OPENCODE_PATH:\$PATH' && command -v opencode" >/dev/null 2>&1; then
+        log_warn "opencode installation verification failed (may need manual intervention)"
+        log_warn "opencode is optional - continuing with setup"
+        return 1
+    fi
+    
+    log_info "✓ opencode installed to: ${OPENCODE_PATH}"
+    
+    # Create systemd service for opencode
+    log_info "Creating systemd service for opencode..."
+    cat > /etc/systemd/system/opencode@.service <<'EOF'
+[Unit]
+Description=OpenCode Web Editor
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/%i/.opencode/bin/opencode serve --port 8082 --host 0.0.0.0
+Restart=always
+User=%i
+WorkingDirectory=/home/%i
+Environment="PATH=/home/%i/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=default.target
+EOF
+    
+    systemctl daemon-reload
+    systemctl enable opencode@"$CONTAINER_USER"
+    systemctl start opencode@"$CONTAINER_USER"
+    
+    # Wait for service to start
+    sleep 3
+    
+    if systemctl is-active opencode@"$CONTAINER_USER" >/dev/null 2>&1; then
+        log_info "✓ opencode installed and running on port 8082"
+    else
+        log_warn "opencode service may not have started correctly"
+        log_warn "Check logs: journalctl -u opencode@$CONTAINER_USER"
+    fi
+}
+
+# ============================================================================
 # Main installation
 # ============================================================================
 
@@ -309,6 +385,13 @@ else
     log_error "filebrowser installation failed"
 fi
 
+# Install opencode
+if install_opencode; then
+    log_info "✓ opencode installation complete"
+else
+    log_warn "opencode installation failed (optional - continuing)"
+fi
+
 # ============================================================================
 # Summary
 # ============================================================================
@@ -318,5 +401,6 @@ log_info ""
 log_info "Access URLs (replace <container-ip> with your container's IP):"
 log_info "  - VS Code:      http://<container-ip>:8080  (password: coder)"
 log_info "  - FileBrowser:  http://<container-ip>:8081  (admin/coder)"
+log_info "  - OpenCode:     http://<container-ip>:8082"
 log_info ""
 log_info "All services are running and will start automatically on boot."

@@ -42,6 +42,13 @@ else
     SERVICES_OK=false
 fi
 
+# Check opencode (optional)
+if systemctl is-active --quiet opencode@"${CONTAINER_USER}"; then
+    log_info "✓ opencode is running"
+else
+    log_warn "⚠ opencode is not running (optional service)"
+fi
+
 # Verify critical tools are installed
 TOOLS_OK=true
 
@@ -121,7 +128,8 @@ cat << EOF
                     Username: admin
                     Password: coder
    
-
+   OpenCode:        http://${CONTAINER_IP}:8082
+                    Alternative web editor
 
 🔌 Terminal Access:
    
