@@ -1,281 +1,237 @@
-# LXC Scripts
+# LXC Scripts and Configuration Management
 
-This directory contains scripts for deploying and managing LXC containers in ProxmoxVE.
-
-## ProxmoxVE Integration Scripts
-
-### `web3-dev-container.sh` - Main ProxmoxVE Script
-
-A ProxmoxVE-compatible LXC container creation script that follows the [community-scripts/ProxmoxVE](https://github.com/community-scripts/ProxmoxVE) pattern.
-
-**Usage:**
-
-```bash
-# From ProxmoxVE host shell:
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/web3-dev-container.sh)"
-
-# Or using curl:
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/web3-dev-container.sh)"
-```
-
-**Container Specifications:**
-
-- **Type:** Privileged LXC (for Docker-in-Docker support)
-- **OS:** Ubuntu 24.04 LTS
-- **CPU:** 4 cores (configurable via `var_cpu`)
-- **RAM:** 8192 MB (configurable via `var_ram`)
-- **Disk:** 20 GB (configurable via `var_disk`)
-- **Features:** Nesting, Keyctl, FUSE enabled
-- **Tags:** web3, development, nodejs, docker
-
-**What it creates:**
-
-1. Privileged LXC container with development-friendly settings
-2. `coder` user (UID 1000) with sudo NOPASSWD access
-3. Bash shell with Starship prompt
-4. Git-based configuration management system (auto-sync on boot)
-5. SSH access configured via ProxmoxVE standard process
-
-**Post-installation:**
-
-- Development tools (Docker, Node.js, Web3 tools) are installed via git-synced configuration
-- Container automatically syncs configuration on every boot
-- Manual updates can be triggered via `update_script()` function
-
-### `../templates/web3-dev-install.sh` - Container Installation Template
-
-The installation template that runs inside the LXC container during initial setup. Located in `infra/lxc/templates/` for reusability and customization.
-
-**What it installs:**
-
-1. **Base system packages:** curl, git, sudo, wget, build-essential, etc.
-2. **User setup:** Creates `coder` user with proper permissions
-3. **Starship prompt:** Modern, fast shell prompt for bash
-4. **Config-manager service:** Git-based configuration synchronization
-5. **First sync:** Automatically runs configuration sync during install
-
-**ProxmoxVE Compliance:**
-
-- Uses all standard ProxmoxVE helper functions (`msg_info`, `msg_ok`, `$STD`)
-- Follows ProxmoxVE error handling and logging conventions
-- Integrates with ProxmoxVE SSH key management (`motd_ssh`)
-- Uses ProxmoxVE container finalization (`customize`, `cleanup_lxc`)
-
-## Configuration Management Integration
-
-The scripts integrate with the config-manager service located in `config-manager/`:
-
-- **Repository:** https://github.com/kethalia/pve-home-lab.git
-- **Branch:** main
-- **Config Path:** infra/lxc/container-configs
-- **Auto-sync:** Enabled on container boot
-- **Manual sync:** `sudo systemctl restart config-manager`
-
-## Development Tools Installed
-
-Via git-synced configuration from `container-configs/packages/`:
-
-**System Packages:**
-
-- Docker CE (docker-ce, docker-ce-cli, containerd.io)
-- Node.js and npm ecosystem
-- Build tools and utilities
-
-**Custom Tools:**
-
-- **Foundry** (forge, cast, anvil, chisel) - Ethereum development
-- **GitHub CLI** (gh) - GitHub integration
-- **Act** (act) - Local GitHub Actions runner
-- **pnpm** - Fast npm package manager
-
-**Package Files:**
-
-- `cli.custom` - CLI development tools
-- `node.custom` - Node.js ecosystem tools
-- `web3.custom` - Blockchain development tools
-
-## Usage Examples
-
-### Basic Container Creation
-
-```bash
-# Run from ProxmoxVE host
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/web3-dev-container.sh)"
-```
-
-### Custom Resource Allocation
-
-```bash
-# 2 CPU, 4GB RAM, 30GB disk
-var_cpu=2 var_ram=4096 var_disk=30 bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/web3-dev-container.sh)"
-```
-
-### Container Management
-
-```bash
-# SSH into container
-ssh coder@<container_ip>
-
-# Check configuration sync status
-journalctl -u config-manager
-
-# Manual configuration sync
-sudo systemctl restart config-manager
-
-# Check rollback options
-config-rollback status
-config-rollback list
-
-# View sync logs
-cat /var/log/config-manager/sync.log
-```
-
-## Update Process
-
-The container can be updated using multiple methods:
-
-### Automatic Updates
-
-- Container syncs configuration on every boot via config-manager service
-- Development tools are updated via git-synced packages from repository
-
-### Manual Configuration Sync (Inside Container)
-
-```bash
-# Trigger manual configuration sync
-sudo systemctl restart config-manager
-
-# Check sync status and logs
-journalctl -u config-manager -f
-
-# View sync log file
-cat /var/log/config-manager/sync.log
-
-# Check configuration status
-config-rollback status
-
-# List available rollback snapshots
-config-rollback list
-```
-
-### System Updates via ProxmoxVE (From Host)
-
-The `update_script()` function performs system package updates and restarts config-manager.
-
-**Via ProxmoxVE Web UI:**
-
-1. Navigate to your container in the web interface
-2. Select the container
-3. Click "More" → "Update" (if available in your ProxmoxVE version)
-
-**Via Command Line (from ProxmoxVE host):**
-
-```bash
-# Find your container ID (e.g., 100)
-pct list | grep "Web3 Dev"
-
-# Enter the container console
-pct enter <container_id>
-
-# Inside container, manually run the update commands:
-apt update && apt upgrade -y
-systemctl restart config-manager
-```
-
-**What update_script() does:**
-
-1. Checks container storage and resources
-2. Updates base system packages (`apt update && apt upgrade`)
-3. Restarts config-manager service to sync latest configuration
-4. Validates that config-manager is running properly
-
-**Note:** The ProxmoxVE community-scripts pattern typically invokes `update_script()` through the ProxmoxVE UI "Update" button. The exact invocation method depends on your ProxmoxVE version and configuration.
+This directory contains the configuration management system and supporting scripts for LXC containers.
 
 ## Directory Structure
 
 ```
 infra/lxc/
 ├── scripts/
-│   ├── README.md                       # This documentation
-│   ├── web3-dev-container.sh           # Main ProxmoxVE script
-│   └── config-manager/                 # Configuration management system
-│       ├── install-config-manager.sh   # Service installer
-│       ├── config-sync.sh              # Main sync script
-│       ├── config-manager.service      # Systemd service
-│       └── ...                         # Other config-manager components
+│   ├── README.md                    # This file
+│   └── config-manager/              # Configuration management system
+│       ├── install-config-manager.sh
+│       ├── config-sync.sh
+│       ├── config-rollback
+│       └── ...
 ├── templates/
-│   └── web3-dev-install.sh             # Container installation template
-└── container-configs/                  # Git-synced configuration
-    ├── packages/                       # Package installation lists
-    ├── scripts/                        # Boot-time scripts
-    └── files/                          # Managed configuration files
+│   └── web3-dev/                    # Web3 development template
+│       ├── container.sh             # ProxmoxVE creation script
+│       ├── install.sh               # Container setup script
+│       └── README.md                # Template documentation
+└── container-configs/               # Git-synced configuration
+    ├── packages/                    # Package installation lists
+    ├── scripts/                     # Boot-time scripts
+    └── files/                       # Managed configuration files
 ```
 
-## Requirements
+## Configuration Management System
 
-- **ProxmoxVE:** 8.x or 9.x
-- **Network:** Internet access for downloading packages and git sync
-- **Storage:** Sufficient storage pool space for container disk allocation
-- **Permissions:** Ability to create privileged containers on ProxmoxVE host
+The `config-manager/` directory contains the git-based configuration management system used by all LXC templates.
 
-## Troubleshooting
+### Components
 
-### Container Creation Issues
+- **`install-config-manager.sh`** - Installer script (called by templates)
+- **`config-sync.sh`** - Main synchronization logic
+- **`config-rollback`** - Rollback and snapshot management
+- **`config-manager.service`** - Systemd service for auto-sync
+
+### Features
+
+- **Declarative Configuration:** All settings in version-controlled files
+- **Auto-Sync on Boot:** Configuration applied every container start
+- **Rollback Capable:** Snapshot system with conflict detection
+- **Package Management:** Supports apt, custom installers, npm packages
+- **File Management:** Template-based file deployment with policies
+- **Boot Scripts:** Custom initialization scripts
+
+### Documentation
+
+See `config-manager/README.md` for detailed documentation on:
+
+- Installation and usage
+- Configuration structure
+- Package management
+- File management
+- Rollback system
+
+## Templates
+
+Templates are complete, self-contained container setups located in `../templates/`.
+
+### Available Templates
+
+#### web3-dev
+
+Web3 development environment with Docker-in-Docker support.
+
+**Quick Start:**
 
 ```bash
-# Check ProxmoxVE logs
-journalctl -xe
-
-# Verify network connectivity
-ping github.com
-
-# Check storage pool space
-pvesm status
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
-### Configuration Sync Issues
+**Includes:**
+
+- Docker CE with Docker Compose
+- Node.js ecosystem (npm, pnpm)
+- Web3 tools (Foundry, Solidity)
+- CLI utilities (gh, act)
+
+**Documentation:** `../templates/web3-dev/README.md`
+
+### Creating Custom Templates
+
+Templates are reusable, self-contained setups that can be customized:
+
+1. **Copy existing template:**
+
+   ```bash
+   cp -r infra/lxc/templates/web3-dev infra/lxc/templates/my-template
+   ```
+
+2. **Customize components:**
+   - `container.sh` - Container resources, tags, OS
+   - `install.sh` - Base packages, user setup
+   - `README.md` - Documentation for your template
+
+3. **Create custom configuration:**
+
+   ```bash
+   mkdir infra/lxc/container-configs-my-template
+   ```
+
+4. **Update install.sh to use custom config:**
+   ```bash
+   CONFIG_PATH="${CONFIG_PATH:-infra/lxc/container-configs-my-template}"
+   ```
+
+### Template Best Practices
+
+- **Self-contained:** Each template should include container.sh, install.sh, and README.md
+- **Documented:** Clear README explaining use case and customization
+- **Configurable:** Use environment variables for customization
+- **Reusable:** Design for easy forking and modification
+
+### Example: Creating a Python Template
 
 ```bash
-# Inside container - check service status
-systemctl status config-manager
+# 1. Copy web3-dev template
+cp -r infra/lxc/templates/web3-dev infra/lxc/templates/python-dev
 
-# Check sync logs
-journalctl -u config-manager -f
+# 2. Edit container.sh
+APP="Python Dev Container"
+var_tags="${var_tags:-python;development;django;flask}"
 
-# Check git repository access
-git ls-remote https://github.com/kethalia/pve-home-lab.git
+# 3. Edit install.sh
+CONFIG_PATH="${CONFIG_PATH:-infra/lxc/container-configs-python}"
 
-# Manual sync
+# 4. Create Python-specific configs
+mkdir -p infra/lxc/container-configs-python/packages
+echo "python3 python3-pip python3-venv" > infra/lxc/container-configs-python/packages/python.apt
+echo "django flask fastapi" > infra/lxc/container-configs-python/packages/python.pip
+
+# 5. Update README.md with Python-specific documentation
+```
+
+## Container Configs
+
+The `../container-configs/` directory contains the default declarative configuration used by templates.
+
+### Structure
+
+```
+container-configs/
+├── packages/
+│   ├── *.apt         # APT packages (one per line)
+│   ├── *.custom      # Custom installer scripts
+│   └── *.npm         # NPM global packages
+├── scripts/
+│   └── *.sh          # Boot-time scripts (run alphabetically)
+└── files/
+    ├── *.template    # File templates (with variable substitution)
+    └── *.policy      # Deployment policies (deploy-once, always-update, etc.)
+```
+
+### Creating Custom Configs
+
+You can create separate config directories for different template types:
+
+- `container-configs/` - Default (web3 development)
+- `container-configs-python/` - Python development
+- `container-configs-datascience/` - Data science with Jupyter
+- `container-configs-minimal/` - Minimal base system
+
+Each config directory follows the same structure (packages/, scripts/, files/).
+
+## Usage Examples
+
+### Deploy Web3 Development Container
+
+```bash
+# Default configuration
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+
+# Custom resources
+var_cpu=2 var_ram=4096 var_disk=30 \
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+```
+
+### Using Custom Repository
+
+```bash
+# Point to your fork
+REPO_URL="https://github.com/myuser/my-fork.git" \
+REPO_BRANCH="develop" \
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+```
+
+### Container Management
+
+```bash
+# List containers
+pct list
+
+# Enter container console
+pct enter <container-id>
+
+# Inside container - check config status
+config-rollback status
+
+# Inside container - trigger manual sync
 sudo systemctl restart config-manager
+
+# Inside container - view sync logs
+journalctl -u config-manager -f
 ```
 
-### Development Tools Not Available
+## Related Documentation
 
-```bash
-# Check if tools are installed
-docker --version
-node --version
-forge --version
-
-# If not installed, check package installation logs
-cat /var/log/config-manager/sync.log | grep -i error
-
-# Restart container to refresh PATH
-# Or source shell profile
-source ~/.bashrc
-```
+- **Templates:** `../templates/<template-name>/README.md`
+- **Config Manager:** `config-manager/README.md`
+- **Container Configs:** `../container-configs/README.md`
+- **ProxmoxVE Pattern:** [community-scripts/ProxmoxVE](https://github.com/community-scripts/ProxmoxVE)
 
 ## Contributing
 
-When modifying these scripts:
+### Reporting Issues
 
-1. **Maintain ProxmoxVE compliance:** Follow the community-scripts patterns
-2. **Test syntax:** Run `bash -n script.sh` before committing
-3. **Document changes:** Update this README with any new features
-4. **Verify integration:** Test config-manager integration with local changes
+Report issues at: https://github.com/kethalia/pve-home-lab/issues
 
-## Related Issues
+### Contributing Templates
 
-- **Issue #46:** ProxmoxVE LXC install script integration (this implementation)
-- **Issue #38:** Epic - Git-based LXC Configuration Management
-- **Issues #39-#45:** Config-manager service dependencies
+1. Create new template in `../templates/your-template/`
+2. Include container.sh, install.sh, and README.md
+3. Create custom configs in `../container-configs-your-template/`
+4. Submit PR with comprehensive documentation
+
+### Contributing to Config Manager
+
+The config-manager system is designed to be generic and reusable. Improvements should:
+
+- Maintain backward compatibility
+- Follow existing patterns
+- Include tests and documentation
+
+## License
+
+MIT - See [LICENSE](https://github.com/kethalia/pve-home-lab/blob/main/LICENSE)
