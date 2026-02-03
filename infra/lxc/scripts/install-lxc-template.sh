@@ -32,43 +32,85 @@ fi
 
 msg_info "Installing config-manager service"
 
-# Create temp directory for repo clone
-TEMP_REPO_DIR="$(mktemp -d -t pve-home-lab-XXXXXX)"
-trap 'rm -rf "${TEMP_REPO_DIR}"' EXIT
+# Create necessary directories
+mkdir -p /etc/config-manager
+mkdir -p /var/log/config-manager
+mkdir -p /var/lib/config-manager/{backups,state}
 
-# Clone the repository
-msg_info "Cloning configuration repository"
-if ! git clone --depth 1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${TEMP_REPO_DIR}" &>/dev/null; then
-  msg_error "Failed to clone repository: ${REPO_URL}"
+# Write configuration file
+msg_info "Creating configuration file"
+cat > /etc/config-manager/config.env <<EOF
+# config-manager configuration
+# Generated on $(date '+%Y-%m-%d %H:%M:%S')
+
+# Git repository containing container configurations
+CONFIG_REPO_URL="${REPO_URL}"
+
+# Branch to track
+CONFIG_BRANCH="${REPO_BRANCH}"
+
+# Sub-path inside the repository where container configs live
+CONFIG_PATH="${CONFIG_PATH}"
+
+# --- Snapshot configuration ---
+# Enable snapshots: auto (enable if backend available), yes, or no
+SNAPSHOT_ENABLED=auto
+
+# Number of days to retain old snapshots before cleanup
+SNAPSHOT_RETENTION_DAYS=7
+
+# Snapshot backend: auto (detect best), zfs, lvm, btrfs, or none (file backups)
+SNAPSHOT_BACKEND=auto
+EOF
+
+chmod 600 /etc/config-manager/config.env
+msg_ok "Configuration file created"
+
+# Download config-sync.sh
+msg_info "Downloading config-sync script"
+if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
+    "https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-sync.sh" \
+    -o /usr/local/bin/config-sync.sh; then
+  msg_error "Failed to download config-sync.sh"
   exit 1
 fi
 
-# Navigate to config-manager directory and run installer
-INSTALLER_PATH="${TEMP_REPO_DIR}/infra/lxc/scripts/config-manager/install-config-manager.sh"
+chmod 755 /usr/local/bin/config-sync.sh
+msg_ok "Config-sync script installed"
 
-if [[ ! -f "${INSTALLER_PATH}" ]]; then
-  msg_error "Config-manager installer not found at: ${INSTALLER_PATH}"
+# Download systemd service file
+msg_info "Downloading systemd service file"
+if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
+    "https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-manager.service" \
+    -o /etc/systemd/system/config-manager.service; then
+  msg_error "Failed to download config-manager.service"
   exit 1
 fi
 
-if ! chmod +x "${INSTALLER_PATH}"; then
-  msg_error "Failed to make installer executable"
+chmod 644 /etc/systemd/system/config-manager.service
+msg_ok "Systemd service file installed"
+
+# Enable and start the service
+msg_info "Enabling and starting config-manager service"
+systemctl daemon-reload || {
+  msg_error "Failed to reload systemd daemon"
   exit 1
+}
+
+systemctl enable config-manager.service || {
+  msg_error "Failed to enable config-manager service"
+  exit 1
+}
+
+# Start the service to perform initial sync
+msg_info "Running initial configuration sync"
+if systemctl start config-manager.service; then
+  msg_ok "Config-manager service started successfully"
+else
+  msg_warn "Initial sync encountered issues. Check logs: journalctl -u config-manager"
 fi
 
-# Install and run config-manager
-# All template-specific setup will be handled by container-configs/
-msg_info "Running config-manager with template configuration"
-if ! bash "${INSTALLER_PATH}" \
-  --repo-url "${REPO_URL}" \
-  --branch "${REPO_BRANCH}" \
-  --config-path "${CONFIG_PATH}" \
-  --run; then
-  msg_error "Config-manager installation failed"
-  exit 1
-fi
-
-msg_ok "Config-manager installed and initial sync completed"
+msg_ok "Config-manager installed and configured"
 
 # ProxmoxVE standard finalizations
 msg_info "Configuring SSH access"
