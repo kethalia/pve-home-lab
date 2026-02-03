@@ -81,9 +81,10 @@ load_config() {
     fi
 
     # Source the config — expected variables:
-    #   CONFIG_REPO_URL   — git clone URL
-    #   CONFIG_BRANCH     — branch to track (default: main)
-    #   CONFIG_PATH       — sub-path inside repo for container configs
+    #   CONFIG_REPO_URL     — git clone URL
+    #   CONFIG_BRANCH       — branch to track (default: main)
+    #   CONFIG_PATH         — sub-path inside repo for container configs
+    #   CONFIG_HELPER_PATH  — path to helper scripts (default: infra/lxc/scripts/config-manager)
     # shellcheck source=/dev/null
     source "$CONFIG_FILE"
 
@@ -101,8 +102,134 @@ load_config() {
 
     CONFIG_BRANCH="${CONFIG_BRANCH:-main}"
     CONFIG_PATH="${CONFIG_PATH:-infra/lxc/container-configs}"
+    CONFIG_HELPER_PATH="${CONFIG_HELPER_PATH:-infra/lxc/scripts/config-manager}"
 
     log_info "Configuration loaded — repo: $CONFIG_REPO_URL (branch: $CONFIG_BRANCH)"
+}
+
+# ---------------------------------------------------------------------------
+# Ensure dependencies are installed
+# ---------------------------------------------------------------------------
+ensure_git() {
+    if command -v git &>/dev/null; then
+        log_info "git is already installed."
+        return 0
+    fi
+
+    log_info "git not found. Installing git..."
+    
+    # Detect package manager
+    if command -v apt-get &>/dev/null; then
+        apt-get update -qq && apt-get install -y -qq git
+    elif command -v dnf &>/dev/null; then
+        dnf install -y -q git
+    elif command -v apk &>/dev/null; then
+        apk add --quiet git
+    else
+        log_error "Unsupported package manager. Cannot install git."
+        return 1
+    fi
+
+    if command -v git &>/dev/null; then
+        log_info "git installed successfully."
+    else
+        log_error "Failed to install git."
+        return 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Ensure helper scripts are available
+# ---------------------------------------------------------------------------
+ensure_helpers() {
+    # Check if all required helpers exist
+    local -a required_helpers=(
+        "${LIB_DIR}/config-manager-helpers.sh"
+        "${LIB_DIR}/execute-scripts.sh"
+        "${LIB_DIR}/process-files.sh"
+        "${LIB_DIR}/snapshot-manager.sh"
+        "${LIB_DIR}/conflict-detector.sh"
+    )
+
+    local missing_helpers="false"
+    for helper in "${required_helpers[@]}"; do
+        if [[ ! -f "$helper" ]]; then
+            missing_helpers="true"
+            break
+        fi
+    done
+
+    # Check if package handlers exist
+    if [[ ! -d "${LIB_DIR}/package-handlers" ]] || [[ -z "$(ls -A "${LIB_DIR}/package-handlers" 2>/dev/null)" ]]; then
+        missing_helpers="true"
+    fi
+
+    if [[ "$missing_helpers" == "false" ]]; then
+        log_info "All helper scripts are already installed."
+        return 0
+    fi
+
+    log_info "Helper scripts not found. Downloading from repository..."
+
+    # Create temp directory for helper download
+    local temp_helper_dir
+    temp_helper_dir="$(mktemp -d -t config-manager-helpers-XXXXXX)"
+    trap 'rm -rf "${temp_helper_dir}"' RETURN
+
+    # Clone repo to temp location to get helpers
+    log_info "Cloning repository to retrieve helper scripts..."
+    if ! git clone --depth 1 --branch "${CONFIG_BRANCH}" "${CONFIG_REPO_URL}" "${temp_helper_dir}" &>/dev/null; then
+        log_error "Failed to clone repository for helper scripts."
+        return 1
+    fi
+
+    # Create lib directory if it doesn't exist
+    mkdir -p "${LIB_DIR}/package-handlers"
+
+    # Copy helper scripts using configured path
+    local helper_source_dir="${temp_helper_dir}/${CONFIG_HELPER_PATH}"
+    
+    if [[ ! -d "$helper_source_dir" ]]; then
+        log_error "Helper source directory not found: ${CONFIG_HELPER_PATH}"
+        log_error "Check CONFIG_HELPER_PATH in /etc/config-manager/config.env"
+        return 1
+    fi
+    
+    log_info "Installing helper scripts from ${CONFIG_HELPER_PATH}..."
+    for helper in "${required_helpers[@]}"; do
+        local helper_name
+        helper_name="$(basename "$helper")"
+        if [[ -f "${helper_source_dir}/${helper_name}" ]]; then
+            cp "${helper_source_dir}/${helper_name}" "$helper"
+            chmod 755 "$helper"
+            log_info "  → Installed ${helper_name}"
+        else
+            log_warn "  → Helper not found: ${helper_name}"
+        fi
+    done
+
+    # Copy package handlers
+    if [[ -d "${helper_source_dir}/package-handlers" ]]; then
+        local handler_count=0
+        if cp "${helper_source_dir}/package-handlers"/*.sh "${LIB_DIR}/package-handlers/" 2>/dev/null; then
+            chmod 755 "${LIB_DIR}/package-handlers"/*.sh 2>/dev/null || true
+            handler_count=$(find "${LIB_DIR}/package-handlers" -name "*.sh" -type f | wc -l)
+            log_info "  → Installed ${handler_count} package handler(s)"
+        else
+            log_warn "  → No package handlers found or copy failed"
+        fi
+    else
+        log_warn "  → Package handlers directory not found"
+    fi
+
+    # Copy config-rollback CLI if it exists
+    if [[ -f "${helper_source_dir}/config-rollback.sh" ]]; then
+        cp "${helper_source_dir}/config-rollback.sh" /usr/local/bin/config-rollback
+        chmod 755 /usr/local/bin/config-rollback
+        log_info "  → Installed config-rollback CLI"
+    fi
+
+    log_info "Helper scripts installed successfully."
 }
 
 # ---------------------------------------------------------------------------
@@ -339,6 +466,12 @@ main() {
 
     # Step 2 — Load configuration
     load_config || exit $?
+
+    # Step 2.5 — Ensure git is installed
+    ensure_git || exit $?
+
+    # Step 2.6 — Ensure helper scripts are available
+    ensure_helpers || exit $?
 
     # Step 3 — Create pre-sync snapshot (Issue #42)
     phase_snapshot

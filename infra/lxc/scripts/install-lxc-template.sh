@@ -31,45 +31,111 @@ if [[ -z "${CONFIG_PATH}" ]]; then
 fi
 
 msg_info "Installing config-manager service"
-INSTALL_SCRIPT="$(mktemp -t install-config-manager.XXXXXX.sh)"
 
-# Download the config-manager installer from repository
+# Create necessary directories
+mkdir -p /etc/config-manager
+mkdir -p /var/log/config-manager
+mkdir -p /var/lib/config-manager/{backups,state}
+
+# Write configuration file
+msg_info "Creating configuration file"
+cat > /etc/config-manager/config.env <<EOF
+# config-manager configuration
+# Generated on $(date '+%Y-%m-%d %H:%M:%S')
+
+# Git repository containing container configurations
+CONFIG_REPO_URL="${REPO_URL}"
+
+# Branch to track
+CONFIG_BRANCH="${REPO_BRANCH}"
+
+# Sub-path inside the repository where container configs live
+CONFIG_PATH="${CONFIG_PATH}"
+
+# Path to helper scripts inside the repository (relative to repo root)
+CONFIG_HELPER_PATH="${CONFIG_HELPER_PATH:-infra/lxc/scripts/config-manager}"
+
+# --- Snapshot configuration ---
+# Enable snapshots: auto (enable if backend available), yes, or no
+SNAPSHOT_ENABLED=auto
+
+# Number of days to retain old snapshots before cleanup
+SNAPSHOT_RETENTION_DAYS=7
+
+# Snapshot backend: auto (detect best), zfs, lvm, btrfs, or none (file backups)
+SNAPSHOT_BACKEND=auto
+EOF
+
+chmod 600 /etc/config-manager/config.env
+msg_ok "Configuration file created"
+
+# Download config-sync.sh
+msg_info "Downloading config-sync script"
 if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
-    "https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/config-manager/install-config-manager.sh" \
-    -o "${INSTALL_SCRIPT}"; then
-  msg_error "Failed to download config-manager installer"
-  rm -f "${INSTALL_SCRIPT}"
+    "https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-sync.sh" \
+    -o /usr/local/bin/config-sync.sh; then
+  msg_error "Failed to download config-sync.sh"
   exit 1
 fi
 
-# Verify that the installer script was successfully obtained
-if [[ ! -f "${INSTALL_SCRIPT}" ]] || [[ ! -s "${INSTALL_SCRIPT}" ]]; then
-  msg_error "Config-manager installer is empty or missing"
-  rm -f "${INSTALL_SCRIPT}"
+# Verify download
+if [[ ! -s /usr/local/bin/config-sync.sh ]]; then
+  msg_error "Downloaded config-sync.sh is empty"
   exit 1
 fi
 
-if ! chmod +x "${INSTALL_SCRIPT}"; then
-  msg_error "Failed to make installer executable"
-  rm -f "${INSTALL_SCRIPT}"
+if ! head -1 /usr/local/bin/config-sync.sh | grep -q '^#!/'; then
+  msg_error "Downloaded config-sync.sh is invalid (missing shebang)"
   exit 1
 fi
 
-# Install and run config-manager
-# All template-specific setup will be handled by container-configs/
-msg_info "Running config-manager with template configuration"
-if ! bash "${INSTALL_SCRIPT}" \
-  --repo-url "${REPO_URL}" \
-  --branch "${REPO_BRANCH}" \
-  --config-path "${CONFIG_PATH}" \
-  --run; then
-  msg_error "Config-manager installation failed"
-  rm -f "${INSTALL_SCRIPT}"
+chmod 755 /usr/local/bin/config-sync.sh
+msg_ok "Config-sync script installed"
+
+# Download systemd service file
+msg_info "Downloading systemd service file"
+if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
+    "https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-manager.service" \
+    -o /etc/systemd/system/config-manager.service; then
+  msg_error "Failed to download config-manager.service"
   exit 1
 fi
 
-rm -f "${INSTALL_SCRIPT}"
-msg_ok "Config-manager installed and initial sync completed"
+# Verify download
+if [[ ! -s /etc/systemd/system/config-manager.service ]]; then
+  msg_error "Downloaded config-manager.service is empty"
+  exit 1
+fi
+
+if ! grep -q '^\[Unit\]' /etc/systemd/system/config-manager.service; then
+  msg_error "Downloaded config-manager.service is invalid (not a systemd unit file)"
+  exit 1
+fi
+
+chmod 644 /etc/systemd/system/config-manager.service
+msg_ok "Systemd service file installed"
+
+# Enable and start the service
+msg_info "Enabling and starting config-manager service"
+systemctl daemon-reload || {
+  msg_error "Failed to reload systemd daemon"
+  exit 1
+}
+
+systemctl enable config-manager.service || {
+  msg_error "Failed to enable config-manager service"
+  exit 1
+}
+
+# Start the service to perform initial sync
+msg_info "Running initial configuration sync"
+if ! systemctl start config-manager.service; then
+  msg_error "Initial sync failed. Check logs: journalctl -u config-manager"
+  msg_error "Container may not be fully configured"
+  exit 1
+fi
+
+msg_ok "Config-manager installed and configured successfully"
 
 # ProxmoxVE standard finalizations
 msg_info "Configuring SSH access"
