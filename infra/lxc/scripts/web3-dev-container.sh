@@ -4,7 +4,7 @@
 # SC2034: ProxmoxVE framework variables used externally
 # SC2154: ProxmoxVE framework provides these variables
 
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/2026-02-02/misc/build.func)
 # Copyright (c) 2026 kethalia
 # Author: kethalia
 # License: MIT | https://github.com/kethalia/pve-home-lab/raw/main/LICENSE
@@ -18,6 +18,10 @@ var_disk="${var_disk:-20}"
 var_os="${var_os:-ubuntu}"
 var_version="${var_version:-24.04}"
 var_unprivileged="${var_unprivileged:-0}"  # Privileged for Docker-in-Docker
+var_install="${var_install:-https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/install/web3-dev-install.sh}"
+var_nesting="${var_nesting:-1}"
+var_keyctl="${var_keyctl:-1}"
+var_fuse="${var_fuse:-1}"
 
 header_info "$APP"
 variables
@@ -48,15 +52,18 @@ function update_script() {
   exit
 }
 
+default_description="Completed successfully!
+
+${APP} setup has been successfully initialized!
+
+Access your container via SSH:
+  ssh coder@\${IP}
+
+Configuration Management:
+  Check sync logs: journalctl -u config-manager
+  Manual sync: sudo systemctl restart config-manager
+  Config status: config-rollback status"
+
 start
 build_container
 description
-
-msg_ok "Completed successfully!\n"
-echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
-echo -e "${INFO}${YW} Access your container via SSH:${CL}"
-echo -e "${TAB}${GATEWAY}${BGN}ssh coder@${IP}${CL}"
-echo -e "${INFO}${YW} Configuration Management:${CL}"
-echo -e "${TAB}Check sync logs: ${BGN}journalctl -u config-manager${CL}"
-echo -e "${TAB}Manual sync: ${BGN}sudo systemctl restart config-manager${CL}"
-echo -e "${TAB}Config status: ${BGN}config-rollback status${CL}"

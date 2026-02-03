@@ -67,27 +67,43 @@ fi
 msg_ok "Created coder user"
 
 msg_info "Installing Starship prompt"
-# Download installer to temporary file for security
-STARSHIP_INSTALLER="$(mktemp -t starship-installer.XXXXXX.sh)"
+
+# Install Starship using prebuilt binary (more secure than curl|sh)
+STARSHIP_VERSION="latest"
+STARSHIP_ARCH="x86_64-unknown-linux-gnu"
+STARSHIP_TEMP="$(mktemp -t starship.XXXXXX.tar.gz)"
 
 if ! curl -fsSL --max-time 30 -A "ProxmoxVE-Script/1.0" \
-    "https://starship.rs/install.sh" -o "${STARSHIP_INSTALLER}"; then
-  msg_error "Failed to download Starship installer"
-  rm -f "${STARSHIP_INSTALLER}"
+    "https://github.com/starship/starship/releases/latest/download/starship-${STARSHIP_ARCH}.tar.gz" \
+    -o "${STARSHIP_TEMP}"; then
+  msg_error "Failed to download Starship binary"
+  rm -f "${STARSHIP_TEMP}"
   exit 1
 fi
 
-# Execute installer
-if ! sh "${STARSHIP_INSTALLER}" --yes; then
-  msg_error "Starship installation failed"
-  rm -f "${STARSHIP_INSTALLER}"
+# Extract to /usr/local/bin
+if ! tar -xzf "${STARSHIP_TEMP}" -C /usr/local/bin/; then
+  msg_error "Failed to extract Starship binary"
+  rm -f "${STARSHIP_TEMP}"
   exit 1
 fi
 
-rm -f "${STARSHIP_INSTALLER}"
+rm -f "${STARSHIP_TEMP}"
+
+# Verify installation
+if ! command -v starship >/dev/null 2>&1; then
+  msg_error "Starship binary not found after installation"
+  exit 1
+fi
+
+# Ensure coder home directory exists and is properly owned
+if [ ! -d "/home/coder" ]; then
+  mkdir -p /home/coder
+  chown coder:coder /home/coder
+fi
 
 # Configure for coder user
-if ! sudo -u coder bash -c 'echo "eval \"\$(starship init bash)\"" >> ~/.bashrc'; then
+if ! sudo -u coder bash -c 'echo "eval \"\$(starship init bash)\"" >> /home/coder/.bashrc'; then
   msg_warn "Failed to configure Starship for coder user"
 fi
 
@@ -99,27 +115,22 @@ fi
 msg_ok "Installed Starship prompt"
 
 msg_info "Installing config-manager service"
-# Determine the path to the install script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_SCRIPT="$(mktemp -t install-config-manager.XXXXXX.sh)"
 
-# Copy from local repository if available, otherwise download
-if [[ -f "${SCRIPT_DIR}/../config-manager/install-config-manager.sh" ]]; then
-  msg_info "Using local config-manager installer"
-  if ! cp "${SCRIPT_DIR}/../config-manager/install-config-manager.sh" "${INSTALL_SCRIPT}"; then
-    msg_error "Failed to copy local config-manager installer"
-    rm -f "${INSTALL_SCRIPT}"
-    exit 1
-  fi
-else
-  msg_info "Downloading config-manager installer"
-  if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
-      "https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/config-manager/install-config-manager.sh" \
-      -o "${INSTALL_SCRIPT}"; then
-    msg_error "Failed to download config-manager installer"
-    rm -f "${INSTALL_SCRIPT}"
-    exit 1
-  fi
+# Download the config-manager installer from repository
+if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
+    "https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/scripts/config-manager/install-config-manager.sh" \
+    -o "${INSTALL_SCRIPT}"; then
+  msg_error "Failed to download config-manager installer"
+  rm -f "${INSTALL_SCRIPT}"
+  exit 1
+fi
+
+# Verify that the installer script was successfully obtained
+if [[ ! -f "${INSTALL_SCRIPT}" ]] || [[ ! -s "${INSTALL_SCRIPT}" ]]; then
+  msg_error "Config-manager installer is empty or missing"
+  rm -f "${INSTALL_SCRIPT}"
+  exit 1
 fi
 
 if ! chmod +x "${INSTALL_SCRIPT}"; then

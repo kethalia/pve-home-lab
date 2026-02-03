@@ -132,17 +132,64 @@ cat /var/log/config-manager/sync.log
 
 ## Update Process
 
-The container can be updated using the ProxmoxVE standard update process:
+The container can be updated using multiple methods:
 
-1. **Automatic updates:** Container syncs configuration on every boot
-2. **Manual updates:** Run the `update_script()` function
-3. **System updates:** Base system packages are updated during sync
-4. **Tool updates:** Development tools are updated via git-synced packages
+### Automatic Updates
+
+- Container syncs configuration on every boot via config-manager service
+- Development tools are updated via git-synced packages from repository
+
+### Manual Configuration Sync (Inside Container)
 
 ```bash
-# From ProxmoxVE host (re-run the main script with update mode)
-# This will trigger the update_script() function
+# Trigger manual configuration sync
+sudo systemctl restart config-manager
+
+# Check sync status and logs
+journalctl -u config-manager -f
+
+# View sync log file
+cat /var/log/config-manager/sync.log
+
+# Check configuration status
+config-rollback status
+
+# List available rollback snapshots
+config-rollback list
 ```
+
+### System Updates via ProxmoxVE (From Host)
+
+The `update_script()` function performs system package updates and restarts config-manager.
+
+**Via ProxmoxVE Web UI:**
+
+1. Navigate to your container in the web interface
+2. Select the container
+3. Click "More" → "Update" (if available in your ProxmoxVE version)
+
+**Via Command Line (from ProxmoxVE host):**
+
+```bash
+# Find your container ID (e.g., 100)
+pct list | grep "Web3 Dev"
+
+# Enter the container console
+pct enter <container_id>
+
+# Inside container, manually run the update commands:
+apt update && apt upgrade -y
+systemctl restart config-manager
+```
+
+**What update_script() does:**
+
+1. Checks container storage and resources
+2. Updates base system packages (`apt update && apt upgrade`)
+3. Restarts config-manager service to sync latest configuration
+4. Validates that config-manager is running properly
+
+**Note:** The ProxmoxVE community-scripts pattern typically invokes `update_script()` through the ProxmoxVE UI "Update" button. The exact invocation method depends on your ProxmoxVE version and configuration.
 
 ## Directory Structure
 
