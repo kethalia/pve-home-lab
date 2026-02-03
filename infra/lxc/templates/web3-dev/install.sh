@@ -33,7 +33,9 @@ $STD apt-get install -y \
   build-essential \
   vim \
   unzip \
-  software-properties-common
+  software-properties-common \
+  fonts-firacode \
+  fonts-powerline
 msg_ok "Installed base system packages"
 
 msg_info "Creating coder user (UID 1000)"

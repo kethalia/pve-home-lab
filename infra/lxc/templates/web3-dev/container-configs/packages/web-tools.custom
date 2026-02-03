@@ -120,64 +120,89 @@ EOF
     echo "✓ opencode installed and running on port 8082"
 }
 
-# Install VS Code extensions for code-server
+# Install VS Code extensions for code-server (matching Coder template)
 install_vscode_extensions() {
     echo "Installing VS Code extensions for code-server..."
     
     # Wait for code-server to be fully started
     sleep 5
     
-    # Install extensions as coder user
-    sudo -u coder /usr/bin/code-server --install-extension dbaeumer.vscode-eslint
+    # Install all extensions from Coder template as coder user
+    sudo -u coder /usr/bin/code-server --install-extension binary-ink.dark-modern-oled-theme-set
+    sudo -u coder /usr/bin/code-server --install-extension pkief.material-icon-theme
+    sudo -u coder /usr/bin/code-server --install-extension prisma.prisma
+    sudo -u coder /usr/bin/code-server --install-extension graphql.vscode-graphql
+    sudo -u coder /usr/bin/code-server --install-extension graphql.vscode-graphql-syntax
+    sudo -u coder /usr/bin/code-server --install-extension bradlc.vscode-tailwindcss
+    sudo -u coder /usr/bin/code-server --install-extension tintinweb.vscode-solidity-language
+    sudo -u coder /usr/bin/code-server --install-extension nomicfoundation.hardhat-solidity
     sudo -u coder /usr/bin/code-server --install-extension esbenp.prettier-vscode
-    sudo -u coder /usr/bin/code-server --install-extension ms-vscode.vscode-typescript-next
-    sudo -u coder /usr/bin/code-server --install-extension GitHub.copilot
     sudo -u coder /usr/bin/code-server --install-extension eamodio.gitlens
+    sudo -u coder /usr/bin/code-server --install-extension oderwat.indent-rainbow
+    sudo -u coder /usr/bin/code-server --install-extension gruntfuggly.todo-tree
+    sudo -u coder /usr/bin/code-server --install-extension pflannery.vscode-versionlens
+    sudo -u coder /usr/bin/code-server --install-extension ms-vsliveshare.vsliveshare
+    sudo -u coder /usr/bin/code-server --install-extension hashicorp.terraform
     sudo -u coder /usr/bin/code-server --install-extension ms-azuretools.vscode-docker
-    sudo -u coder /usr/bin/code-server --install-extension JuanBlanco.solidity
-    sudo -u coder /usr/bin/code-server --install-extension NomicFoundation.hardhat-solidity
+    sudo -u coder /usr/bin/code-server --install-extension cweijan.vscode-postgresql-client2
+    sudo -u coder /usr/bin/code-server --install-extension usernamehw.errorlens
+    sudo -u coder /usr/bin/code-server --install-extension streetsidesoftware.code-spell-checker
+    sudo -u coder /usr/bin/code-server --install-extension wayou.vscode-todo-highlight
     
-    echo "✓ VS Code extensions installed"
+    echo "✓ VS Code extensions installed (20 extensions from Coder template)"
 }
 
-# Configure VS Code settings
+# Configure VS Code settings (matching Coder template exactly)
 configure_vscode_settings() {
     echo "Configuring VS Code settings..."
     
     mkdir -p /home/coder/.local/share/code-server/User
     cat > /home/coder/.local/share/code-server/User/settings.json <<'EOF'
 {
-    "workbench.colorTheme": "Default Dark+",
-    "editor.fontSize": 14,
-    "editor.tabSize": 2,
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "files.autoSave": "afterDelay",
-    "files.autoSaveDelay": 1000,
-    "terminal.integrated.fontSize": 14,
-    "git.enableSmartCommit": true,
-    "git.confirmSync": false,
-    "prettier.semi": false,
-    "prettier.singleQuote": true,
-    "prettier.trailingComma": "es5",
-    "[javascript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[typescript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[json]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
     "[solidity]": {
-        "editor.defaultFormatter": "JuanBlanco.solidity"
-    }
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "solidity.telemetry": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.fontFamily": "Fira Code",
+    "editor.fontLigatures": true,
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "on",
+    "editor.inlineSuggest.enabled": true,
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": true,
+    "editor.minimap.enabled": false,
+    "editor.stickyScroll.enabled": true,
+    "editor.tabSize": 2,
+    "files.autoSave": "off",
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.hg/store/**": true,
+        "**/dist/**": true,
+        "**/build/**": true,
+        "**/.next/**": true,
+        "**/out/**": true
+    },
+    "git.confirmSync": false,
+    "git.autofetch": true,
+    "git.enableSmartCommit": true,
+    "terminal.integrated.scrollback": 10000,
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.fontSize": 14,
+    "workbench.colorTheme": "Dark Modern (OLED Black) [Orange]",
+    "workbench.iconTheme": "material-icon-theme",
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
+    "docker.showStartPage": false
 }
 EOF
 
     chown -R coder:coder /home/coder/.local/share/code-server
     
-    echo "✓ VS Code settings configured"
+    echo "✓ VS Code settings configured (matching Coder template)"
 }
 
 # Main installation
