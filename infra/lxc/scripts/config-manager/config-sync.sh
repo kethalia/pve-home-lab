@@ -172,7 +172,7 @@ ensure_helpers() {
     log_info "Helper scripts not found. Downloading from repository..."
 
     # Create temp directory for helper download
-    local temp_helper_dir
+    local temp_helper_dir=""
     temp_helper_dir="$(mktemp -d -t config-manager-helpers-XXXXXX)"
     trap 'rm -rf "${temp_helper_dir}"' RETURN
 
