@@ -27,7 +27,10 @@
 #   3  — backend operation failed
 #   4  — invalid arguments
 
-set -euo pipefail
+# Note: We use 'set -eo pipefail' without -u to avoid contaminating the parent
+# shell when this script is sourced by config-sync.sh. The -u flag causes
+# unbound variable errors to leak into the parent scope.
+set -eo pipefail
 
 # Guard against double-sourcing (similar to config-manager-helpers.sh)
 [[ -n "${_SNAPSHOT_MANAGER_LOADED:-}" ]] && return 0
