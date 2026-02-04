@@ -96,30 +96,44 @@ msg_info "Running Web3 Dev Container configuration"
 
 # Configuration (must be provided via environment variables)
 REPO_URL="${REPO_URL:-https://github.com/kethalia/pve-home-lab.git}"
-REPO_BRANCH="${REPO_BRANCH:-main}"
+REPO_BRANCH="${REPO_BRANCH:-${SCRIPT_BRANCH}}"  # Use same branch as container.sh
 
 # The install script needs FUNCTIONS_FILE_PATH (ProxmoxVE framework functions)
 # This was already exported by build_container, so it's available in the current shell
 # We need to pass it along with other required variables to the container
 
-# Download the install script to a temporary file in the container
-pct exec "$CTID" -- bash -c "curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/install-lxc-template.sh > /tmp/install-lxc-template.sh"
+# Create a wrapper script inside the container that downloads functions and runs install
+# We can't pass FUNCTIONS_FILE_PATH as an env var because it contains multi-line script content
+cat > /tmp/web3-install-wrapper-${CTID}.sh <<EOFWRAPPER
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Execute the install script inside the container with required environment
-if ! pct exec "$CTID" -- bash -c "
-export FUNCTIONS_FILE_PATH='${FUNCTIONS_FILE_PATH}'
+# Download ProxmoxVE framework functions (same as build_container does)
+export FUNCTIONS_FILE_PATH="\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)"
+
+# Set other required environment variables
 export CONFIG_PATH='${CONFIG_PATH}'
 export REPO_URL='${REPO_URL}'
 export REPO_BRANCH='${REPO_BRANCH}'
-bash /tmp/install-lxc-template.sh
-"; then
+
+# Download and execute the install script
+curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/install-lxc-template.sh | bash
+EOFWRAPPER
+
+# Push the wrapper script to the container
+pct push "$CTID" /tmp/web3-install-wrapper-${CTID}.sh /tmp/install-wrapper.sh
+
+# Execute it
+if ! pct exec "$CTID" -- bash /tmp/install-wrapper.sh; then
   msg_error "Web3 Dev Container configuration failed"
   msg_error "Check logs: journalctl -u config-manager (inside container)"
+  rm -f /tmp/web3-install-wrapper-${CTID}.sh
   exit 1
 fi
 
 # Clean up
-pct exec "$CTID" -- rm -f /tmp/install-lxc-template.sh
+pct exec "$CTID" -- rm -f /tmp/install-wrapper.sh
+rm -f /tmp/web3-install-wrapper-${CTID}.sh
 
 msg_ok "Web3 Dev Container configured successfully"
 
