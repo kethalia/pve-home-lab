@@ -89,14 +89,14 @@ install_pnpm() {
     log_info "Installing pnpm (Node.js package manager)..."
     
     # Check if pnpm is already installed
-    if sudo -i -u "$CONTAINER_USER" bash -c "command -v pnpm" >/dev/null 2>&1; then
-        PNPM_VERSION=$(sudo -i -u "$CONTAINER_USER" bash -c "pnpm --version" 2>/dev/null || echo "unknown")
+    if run_as_user bash -c "command -v pnpm" >/dev/null 2>&1; then
+        PNPM_VERSION=$(run_as_user bash -c "pnpm --version" 2>/dev/null || echo "unknown")
         log_info "pnpm is already installed: v${PNPM_VERSION}"
         return 0
     fi
     
     # Check if npm is available
-    if ! sudo -i -u "$CONTAINER_USER" bash -c "command -v npm" >/dev/null 2>&1; then
+    if ! run_as_user bash -c "command -v npm" >/dev/null 2>&1; then
         log_error "npm is not available. Cannot install pnpm."
         log_error "Please ensure Node.js is installed first (03-nodejs-setup.sh)"
         return 1
@@ -105,7 +105,7 @@ install_pnpm() {
     # Install pnpm globally via npm
     log_info "Installing pnpm globally via npm..."
     
-    sudo -i -u "$CONTAINER_USER" bash -c "
+    run_as_user bash -c "
         export NVM_DIR='/home/${CONTAINER_USER}/.nvm'
         if [[ -s \"\$NVM_DIR/nvm.sh\" ]]; then
             source \"\$NVM_DIR/nvm.sh\"
@@ -114,14 +114,14 @@ install_pnpm() {
     "
     
     # Verify installation
-    if sudo -i -u "$CONTAINER_USER" bash -c "
+    if run_as_user bash -c "
         export NVM_DIR='/home/${CONTAINER_USER}/.nvm'
         if [[ -s \"\$NVM_DIR/nvm.sh\" ]]; then
             source \"\$NVM_DIR/nvm.sh\"
         fi
         command -v pnpm
     " >/dev/null 2>&1; then
-        PNPM_VERSION=$(sudo -i -u "$CONTAINER_USER" bash -c "
+        PNPM_VERSION=$(run_as_user bash -c "
             export NVM_DIR='/home/${CONTAINER_USER}/.nvm'
             if [[ -s \"\$NVM_DIR/nvm.sh\" ]]; then
                 source \"\$NVM_DIR/nvm.sh\"

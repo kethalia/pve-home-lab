@@ -218,3 +218,22 @@ export_script_env() {
     export CONTAINER_USER="${CONTAINER_USER:-coder}"
     export CONFIG_MANAGER_FIRST_RUN="${CONFIG_MANAGER_FIRST_RUN:-false}"
 }
+
+# ---------------------------------------------------------------------------
+# run_as_user — Run command as container user with proper environment
+#
+# Usage: run_as_user command [args...]
+#        run_as_user bash -c "node --version"
+#
+# Problem: sudo restricts PATH by default, causing scripts with #!/usr/bin/env
+# shebangs to fail because env can't find bash/node/etc in PATH.
+#
+# Solution: Explicitly set full PATH and HOME when running as user.
+# ---------------------------------------------------------------------------
+run_as_user() {
+    sudo -u "$CONTAINER_USER" env \
+        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/$CONTAINER_USER/.local/bin:/home/$CONTAINER_USER/.foundry/bin:/home/$CONTAINER_USER/.nvm/versions/node/*/bin" \
+        HOME="/home/$CONTAINER_USER" \
+        USER="$CONTAINER_USER" \
+        "$@"
+}

@@ -12,15 +12,15 @@ log_info "=== Installing Web3 Development Tools ==="
 FOUNDRY_DIR="/home/${CONTAINER_USER}/.foundry"
 
 # Check if Foundry is already installed
-if sudo -i -u "$CONTAINER_USER" bash -c "command -v forge" >/dev/null 2>&1; then
-    FORGE_VERSION=$(sudo -i -u "$CONTAINER_USER" bash -c "forge --version" 2>/dev/null | head -1 || echo "unknown")
+if run_as_user bash -c "command -v forge" >/dev/null 2>&1; then
+    FORGE_VERSION=$(run_as_user bash -c "forge --version" 2>/dev/null | head -1 || echo "unknown")
     log_info "Foundry is already installed: ${FORGE_VERSION}"
     log_info "✓ Foundry tools available: forge, cast, anvil, chisel"
     
     # Optionally update Foundry
     log_info "Checking for Foundry updates..."
-    if sudo -i -u "$CONTAINER_USER" bash -c "foundryup" >/dev/null 2>&1; then
-        FORGE_VERSION_NEW=$(sudo -i -u "$CONTAINER_USER" bash -c "forge --version" 2>/dev/null | head -1 || echo "unknown")
+    if run_as_user bash -c "foundryup" >/dev/null 2>&1; then
+        FORGE_VERSION_NEW=$(run_as_user bash -c "forge --version" 2>/dev/null | head -1 || echo "unknown")
         if [[ "$FORGE_VERSION" != "$FORGE_VERSION_NEW" ]]; then
             log_info "✓ Foundry updated: ${FORGE_VERSION_NEW}"
         else
@@ -39,7 +39,7 @@ log_info "Foundry not found. Installing Foundry..."
 log_info "Downloading and running foundryup installer..."
 
 # Run foundryup as the container user
-sudo -i -u "$CONTAINER_USER" bash -c "
+run_as_user bash -c "
     curl -L https://foundry.paradigm.xyz | bash
 "
 
@@ -56,18 +56,18 @@ export PATH="${FOUNDRY_DIR}/bin:$PATH"
 
 # Run foundryup to install Foundry tools
 log_info "Running foundryup to install Foundry tools (forge, cast, anvil, chisel)..."
-sudo -i -u "$CONTAINER_USER" bash -c "
+run_as_user bash -c "
     export PATH='${FOUNDRY_DIR}/bin:\$PATH'
     foundryup
 "
 
 # Verify Foundry installation
-if ! sudo -i -u "$CONTAINER_USER" bash -c "export PATH='${FOUNDRY_DIR}/bin:\$PATH' && command -v forge" >/dev/null 2>&1; then
+if ! run_as_user bash -c "export PATH='${FOUNDRY_DIR}/bin:\$PATH' && command -v forge" >/dev/null 2>&1; then
     log_error "Foundry installation verification failed: forge not found"
     exit 1
 fi
 
-FORGE_VERSION=$(sudo -i -u "$CONTAINER_USER" bash -c "export PATH='${FOUNDRY_DIR}/bin:\$PATH' && forge --version" | head -1)
+FORGE_VERSION=$(run_as_user bash -c "export PATH='${FOUNDRY_DIR}/bin:\$PATH' && forge --version" | head -1)
 log_info "✓ Foundry installed: ${FORGE_VERSION}"
 
 # Verify all Foundry tools
@@ -75,7 +75,7 @@ FOUNDRY_TOOLS=("forge" "cast" "anvil" "chisel")
 log_info "Verifying Foundry tools..."
 
 for tool in "${FOUNDRY_TOOLS[@]}"; do
-    if sudo -i -u "$CONTAINER_USER" bash -c "export PATH='${FOUNDRY_DIR}/bin:\$PATH' && command -v $tool" >/dev/null 2>&1; then
+    if run_as_user bash -c "export PATH='${FOUNDRY_DIR}/bin:\$PATH' && command -v $tool" >/dev/null 2>&1; then
         log_info "  ✓ $tool"
     else
         log_warn "  ✗ $tool not found"
@@ -92,7 +92,7 @@ export PATH="$HOME/.foundry/bin:$PATH"
 if [[ -f "$BASHRC" ]]; then
     if ! grep -q ".foundry/bin" "$BASHRC"; then
         log_info "Adding Foundry to PATH in .bashrc..."
-        sudo -i -u "$CONTAINER_USER" bash -c "echo '$FOUNDRY_PATH_SNIPPET' >> $BASHRC"
+        run_as_user bash -c "echo '$FOUNDRY_PATH_SNIPPET' >> $BASHRC"
         log_info "✓ Foundry PATH added to .bashrc"
     else
         log_info "Foundry PATH already present in .bashrc"

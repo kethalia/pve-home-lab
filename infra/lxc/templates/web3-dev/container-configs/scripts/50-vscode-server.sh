@@ -126,7 +126,7 @@ install_vscode_extensions() {
     
     for extension in "${EXTENSIONS[@]}"; do
         log_info "  Installing: ${extension}"
-        if sudo -i -u "$CONTAINER_USER" /usr/bin/code-server --install-extension "$extension" >/dev/null 2>&1; then
+        if run_as_user /usr/bin/code-server --install-extension "$extension" >/dev/null 2>&1; then
             ((INSTALLED++))
         else
             log_warn "  Failed to install: ${extension}"
@@ -147,7 +147,7 @@ configure_vscode_settings() {
     SETTINGS_DIR="/home/${CONTAINER_USER}/.local/share/code-server/User"
     SETTINGS_FILE="${SETTINGS_DIR}/settings.json"
     
-    sudo -i -u "$CONTAINER_USER" mkdir -p "$SETTINGS_DIR"
+    run_as_user mkdir -p "$SETTINGS_DIR"
     
     # Create settings.json with configuration from web-tools.custom
     cat > "$SETTINGS_FILE" <<'EOF'
@@ -284,7 +284,7 @@ install_opencode() {
     log_info "Installing opencode (web-based code editor)..."
     
     # Check if opencode is already installed
-    if sudo -i -u "$CONTAINER_USER" bash -c "command -v opencode" >/dev/null 2>&1; then
+    if run_as_user bash -c "command -v opencode" >/dev/null 2>&1; then
         log_info "opencode is already installed"
         
         # Verify service is running
@@ -302,7 +302,7 @@ install_opencode() {
     log_info "Downloading opencode installer..."
     
     # Run as the container user
-    sudo -i -u "$CONTAINER_USER" bash -c "
+    run_as_user bash -c "
         curl -fsSL https://raw.githubusercontent.com/coder/opencode/main/install.sh | sh
     "
     
@@ -310,7 +310,7 @@ install_opencode() {
     OPENCODE_PATH="/home/${CONTAINER_USER}/.opencode/bin"
     
     # Verify installation
-    if [[ ! -d "$OPENCODE_PATH" ]] || ! sudo -i -u "$CONTAINER_USER" bash -c "export PATH='$OPENCODE_PATH:\$PATH' && command -v opencode" >/dev/null 2>&1; then
+    if [[ ! -d "$OPENCODE_PATH" ]] || ! run_as_user bash -c "export PATH='$OPENCODE_PATH:\$PATH' && command -v opencode" >/dev/null 2>&1; then
         log_warn "opencode installation verification failed (may need manual intervention)"
         log_warn "opencode is optional - continuing with setup"
         return 1

@@ -57,7 +57,7 @@ check_tool() {
     local user_context=${2:-root}
     
     if [[ "$user_context" == "user" ]]; then
-        if sudo -i -u "$CONTAINER_USER" bash -c "command -v $tool" >/dev/null 2>&1; then
+        if run_as_user bash -c "command -v $tool" >/dev/null 2>&1; then
             log_info "✓ $tool is installed (user context)"
         else
             log_warn "✗ $tool is not installed (user context)"

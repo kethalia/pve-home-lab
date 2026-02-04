@@ -19,7 +19,7 @@ if is_installed starship; then
         log_info "✓ Starship is configured in user .bashrc"
     else
         log_info "Adding Starship to user .bashrc..."
-        sudo -i -u "$CONTAINER_USER" bash -c 'echo '"'"'eval "$(starship init bash)"'"'"' >> /home/'"$CONTAINER_USER"'/.bashrc'
+        run_as_user bash -c 'echo '"'"'eval "$(starship init bash)"'"'"' >> /home/'"$CONTAINER_USER"'/.bashrc'
         log_info "✓ Starship added to user .bashrc"
     fi
     
@@ -74,7 +74,7 @@ log_info "✓ Starship installed: ${STARSHIP_VERSION}"
 log_info "Configuring Starship for user '${CONTAINER_USER}'..."
 if [[ -f "/home/${CONTAINER_USER}/.bashrc" ]]; then
     if ! grep -q "starship init bash" "/home/${CONTAINER_USER}/.bashrc"; then
-        sudo -i -u "$CONTAINER_USER" bash -c 'echo '"'"'eval "$(starship init bash)"'"'"' >> /home/'"$CONTAINER_USER"'/.bashrc'
+        run_as_user bash -c 'echo '"'"'eval "$(starship init bash)"'"'"' >> /home/'"$CONTAINER_USER"'/.bashrc'
         log_info "✓ Starship initialization added to user .bashrc"
     else
         log_info "Starship initialization already present in user .bashrc"
@@ -102,9 +102,9 @@ STARSHIP_CONFIG="/home/${CONTAINER_USER}/.config/starship.toml"
 if [[ ! -f "$STARSHIP_CONFIG" ]]; then
     log_info "Creating default Starship configuration..."
     
-    sudo -i -u "$CONTAINER_USER" mkdir -p "/home/${CONTAINER_USER}/.config"
+    run_as_user mkdir -p "/home/${CONTAINER_USER}/.config"
     
-    sudo -i -u "$CONTAINER_USER" bash -c "cat > '$STARSHIP_CONFIG'" <<'EOF'
+    run_as_user bash -c "cat > '$STARSHIP_CONFIG'" <<'EOF'
 # Starship prompt configuration for Web3 development container
 # See https://starship.rs/config/ for full documentation
 

@@ -15,8 +15,8 @@ NVM_DIR="/home/${CONTAINER_USER}/.nvm"
 NODE_VERSION="24"
 
 # Check if Node is already installed
-if sudo -i -u "$CONTAINER_USER" bash -c "command -v node" >/dev/null 2>&1; then
-    EXISTING_NODE_VERSION=$(sudo -i -u "$CONTAINER_USER" bash -c "node --version" 2>/dev/null || echo "unknown")
+if run_as_user bash -c "command -v node" >/dev/null 2>&1; then
+    EXISTING_NODE_VERSION=$(run_as_user bash -c "node --version" 2>/dev/null || echo "unknown")
     log_info "Node.js is already installed: ${EXISTING_NODE_VERSION}"
     
     # Check if it's managed by NVM
@@ -24,18 +24,18 @@ if sudo -i -u "$CONTAINER_USER" bash -c "command -v node" >/dev/null 2>&1; then
         log_info "NVM is already installed at: ${NVM_DIR}"
         
         # Check if Node 24 is installed via NVM
-        if sudo -i -u "$CONTAINER_USER" bash -c "source ${NVM_DIR}/nvm.sh && nvm ls ${NODE_VERSION}" >/dev/null 2>&1; then
+        if run_as_user bash -c "source ${NVM_DIR}/nvm.sh && nvm ls ${NODE_VERSION}" >/dev/null 2>&1; then
             log_info "✓ Node.js ${NODE_VERSION} is installed via NVM"
             
             # Ensure Node 24 is the default
-            sudo -i -u "$CONTAINER_USER" bash -c "source ${NVM_DIR}/nvm.sh && nvm alias default ${NODE_VERSION}"
+            run_as_user bash -c "source ${NVM_DIR}/nvm.sh && nvm alias default ${NODE_VERSION}"
             log_info "✓ Node.js ${NODE_VERSION} set as default"
             
             log_info "Node.js setup is complete — skipping installation."
             exit 0
         else
             log_info "Installing Node.js ${NODE_VERSION} via NVM..."
-            sudo -i -u "$CONTAINER_USER" bash -c "source ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION}"
+            run_as_user bash -c "source ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION}"
             log_info "✓ Node.js ${NODE_VERSION} installed and set as default"
             exit 0
         fi
@@ -48,7 +48,7 @@ log_info "Installing NVM (Node Version Manager)..."
 
 # Download and install NVM for the container user
 log_info "Downloading NVM ${NVM_VERSION}..."
-sudo -i -u "$CONTAINER_USER" bash -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash"
+run_as_user bash -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash"
 
 # Verify NVM installation
 if [[ ! -d "$NVM_DIR" ]]; then
@@ -60,7 +60,7 @@ log_info "✓ NVM installed to: ${NVM_DIR}"
 
 # Install Node.js via NVM
 log_info "Installing Node.js ${NODE_VERSION} via NVM..."
-sudo -i -u "$CONTAINER_USER" bash -c "
+run_as_user bash -c "
     export NVM_DIR='${NVM_DIR}'
     source \"\${NVM_DIR}/nvm.sh\"
     nvm install ${NODE_VERSION}
@@ -69,7 +69,7 @@ sudo -i -u "$CONTAINER_USER" bash -c "
 "
 
 # Verify Node installation
-NODE_VERSION_INSTALLED=$(sudo -i -u "$CONTAINER_USER" bash -c "
+NODE_VERSION_INSTALLED=$(run_as_user bash -c "
     export NVM_DIR='${NVM_DIR}'
     source \"\${NVM_DIR}/nvm.sh\"
     node --version
@@ -83,7 +83,7 @@ fi
 log_info "✓ Node.js installed: ${NODE_VERSION_INSTALLED}"
 
 # Verify npm installation
-NPM_VERSION=$(sudo -i -u "$CONTAINER_USER" bash -c "
+NPM_VERSION=$(run_as_user bash -c "
     export NVM_DIR='${NVM_DIR}'
     source \"\${NVM_DIR}/nvm.sh\"
     npm --version
@@ -95,7 +95,7 @@ log_info "✓ npm installed: v${NPM_VERSION}"
 log_info "Configuring npm global directory..."
 NPM_GLOBAL_DIR="/home/${CONTAINER_USER}/.npm-global"
 
-sudo -i -u "$CONTAINER_USER" bash -c "
+run_as_user bash -c "
     export NVM_DIR='${NVM_DIR}'
     source \"\${NVM_DIR}/nvm.sh\"
     mkdir -p ${NPM_GLOBAL_DIR}
@@ -116,7 +116,7 @@ export NVM_DIR="$HOME/.nvm"
 if [[ -f "$BASHRC" ]]; then
     if ! grep -q "NVM_DIR" "$BASHRC"; then
         log_info "Adding NVM initialization to .bashrc..."
-        sudo -i -u "$CONTAINER_USER" bash -c "echo '$NVM_BASHRC_SNIPPET' >> $BASHRC"
+        run_as_user bash -c "echo '$NVM_BASHRC_SNIPPET' >> $BASHRC"
         log_info "✓ NVM initialization added to .bashrc"
     else
         log_info "NVM initialization already present in .bashrc"
@@ -134,7 +134,7 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 if [[ -f "$BASHRC" ]]; then
     if ! grep -q ".npm-global/bin" "$BASHRC"; then
         log_info "Adding npm global path to .bashrc..."
-        sudo -i -u "$CONTAINER_USER" bash -c "echo '$NPM_PATH_SNIPPET' >> $BASHRC"
+        run_as_user bash -c "echo '$NPM_PATH_SNIPPET' >> $BASHRC"
         log_info "✓ npm global path added to .bashrc"
     else
         log_info "npm global path already present in .bashrc"
