@@ -458,7 +458,7 @@ main() {
     mkdir -p "$LOG_DIR"
 
     log_info "========================================="
-    log_info "config-sync v${VERSION} starting (PID $$)"
+    log_info "config-sync v${CONFIG_SYNC_VERSION} starting (PID $$)"
     log_info "========================================="
 
     # Step 1 — Acquire lock
