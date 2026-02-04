@@ -86,7 +86,7 @@ export default function HomePage() {
           Self-hosted infrastructure as code
         </div>
         <h1 className="mb-6 max-w-3xl text-5xl font-bold leading-tight tracking-tight sm:text-6xl">
-          PVE Home Lab
+          Infrahaus
         </h1>
         <p className="mb-10 max-w-2xl text-lg text-fd-muted-foreground leading-relaxed">
           A Proxmox VE home lab running Docker-based services across AI/ML,
@@ -201,11 +201,11 @@ export default function HomePage() {
       <footer className="border-t border-fd-border px-6 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <p className="text-sm text-fd-muted-foreground">
-            PVE Home Lab &mdash; Self-hosted infrastructure as code
+            Infrahaus &mdash; Self-hosted infrastructure as code
           </p>
           <div className="flex items-center gap-6">
             <a
-              href="https://github.com/kethalia/pve-home-lab"
+              href="https://github.com/kethalia/infrahaus"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"

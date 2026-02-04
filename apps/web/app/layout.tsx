@@ -5,8 +5,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | PVE Home Lab",
-    default: "PVE Home Lab",
+    template: "%s | Infrahaus",
+    default: "Infrahaus",
   },
   description:
     "Documentation for a Proxmox VE home lab with AI, media, gaming, blockchain, and development services.",

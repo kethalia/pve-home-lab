@@ -16,7 +16,7 @@ The Web3 Development Container template implements a secure credential managemen
 
 ### Credential Storage
 
-**File Location:** `/etc/pve-home-lab/credentials`
+**File Location:** `/etc/infrahaus/credentials`
 
 **Permissions:**
 
@@ -59,7 +59,7 @@ generate_password() {
 **View credentials file:**
 
 ```bash
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+pct exec <container-id> -- cat /etc/infrahaus/credentials
 ```
 
 **Example output:**
@@ -83,13 +83,13 @@ pct exec <container-id> -- journalctl -u config-manager -f --no-pager -o cat
 **As root:**
 
 ```bash
-cat /etc/pve-home-lab/credentials
+cat /etc/infrahaus/credentials
 ```
 
 **As coder user:**
 
 ```bash
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 ```
 
 **View welcome message:**
@@ -104,7 +104,7 @@ cat /etc/motd
 2. **Wait for config-manager** to complete (2-5 minutes)
 3. **Retrieve credentials** from ProxmoxVE host:
    ```bash
-   pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+   pct exec <container-id> -- cat /etc/infrahaus/credentials
    ```
 4. **Save credentials** in password manager (recommended)
 5. **Access web services** using retrieved passwords
@@ -123,7 +123,7 @@ cat /etc/motd
 **View current password:**
 
 ```bash
-sudo cat /etc/pve-home-lab/credentials | grep CODE_SERVER_PASSWORD
+sudo cat /etc/infrahaus/credentials | grep CODE_SERVER_PASSWORD
 ```
 
 **Change password (Method 1 - Plaintext):**
@@ -164,7 +164,7 @@ sudo systemctl restart code-server@coder
 **Update credentials file (optional):**
 
 ```bash
-sudo vim /etc/pve-home-lab/credentials
+sudo vim /etc/infrahaus/credentials
 # Update: CODE_SERVER_PASSWORD=your-new-password
 ```
 
@@ -179,7 +179,7 @@ sudo vim /etc/pve-home-lab/credentials
 **View current credentials:**
 
 ```bash
-sudo cat /etc/pve-home-lab/credentials | grep FILEBROWSER
+sudo cat /etc/infrahaus/credentials | grep FILEBROWSER
 ```
 
 **Change password via CLI:**
@@ -206,7 +206,7 @@ sudo systemctl status filebrowser
 **Update credentials file (optional):**
 
 ```bash
-sudo vim /etc/pve-home-lab/credentials
+sudo vim /etc/infrahaus/credentials
 # Update: FILEBROWSER_PASSWORD=new-password
 ```
 
@@ -220,7 +220,7 @@ sudo vim /etc/pve-home-lab/credentials
 **View current password:**
 
 ```bash
-sudo cat /etc/pve-home-lab/credentials | grep OPENCODE_PASSWORD
+sudo cat /etc/infrahaus/credentials | grep OPENCODE_PASSWORD
 ```
 
 **Change password:**
@@ -243,7 +243,7 @@ sudo systemctl status opencode@coder
 **Update credentials file (optional):**
 
 ```bash
-sudo vim /etc/pve-home-lab/credentials
+sudo vim /etc/infrahaus/credentials
 # Update: OPENCODE_PASSWORD=new-password
 ```
 
@@ -366,7 +366,7 @@ If you've lost your credentials:
 
 ```bash
 # From ProxmoxVE host
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+pct exec <container-id> -- cat /etc/infrahaus/credentials
 ```
 
 **Option 2: Reset passwords**
@@ -382,7 +382,7 @@ Follow the service-specific password change procedures above, then update the cr
 pct enter <container-id>
 
 # Remove old credentials
-sudo rm /etc/pve-home-lab/credentials
+sudo rm /etc/infrahaus/credentials
 
 # Re-run configuration scripts
 sudo systemctl restart config-manager
@@ -393,14 +393,14 @@ journalctl -u config-manager -f
 
 ### Credentials File Corrupted
 
-If `/etc/pve-home-lab/credentials` is corrupted:
+If `/etc/infrahaus/credentials` is corrupted:
 
 ```bash
 # Enter container
 pct enter <container-id>
 
 # Manually recreate file
-sudo tee /etc/pve-home-lab/credentials << 'EOF'
+sudo tee /etc/infrahaus/credentials << 'EOF'
 # Generated credentials for Web3 Dev Container
 CODE_SERVER_PASSWORD=your-password-here
 FILEBROWSER_USERNAME=admin
@@ -409,8 +409,8 @@ OPENCODE_PASSWORD=your-password-here
 EOF
 
 # Set correct permissions
-sudo chmod 600 /etc/pve-home-lab/credentials
-sudo chown root:root /etc/pve-home-lab/credentials
+sudo chmod 600 /etc/infrahaus/credentials
+sudo chown root:root /etc/infrahaus/credentials
 
 # Verify each service uses these passwords
 # Follow service-specific password change procedures if needed
@@ -466,7 +466,7 @@ watch -n 1 'ss -tnp | grep ":808"'
 
 ### Credentials File Not Found
 
-**Symptom:** `/etc/pve-home-lab/credentials` doesn't exist
+**Symptom:** `/etc/infrahaus/credentials` doesn't exist
 
 **Cause:** Config-manager hasn't completed initial setup
 
@@ -495,7 +495,7 @@ sudo systemctl restart config-manager
 # The credentials file is for reference only
 # Each service stores passwords independently
 # Update the credentials file to match actual passwords
-sudo vim /etc/pve-home-lab/credentials
+sudo vim /etc/infrahaus/credentials
 ```
 
 ### Password Not Working
@@ -515,14 +515,14 @@ sudo vim /etc/pve-home-lab/credentials
 
    ```bash
    # Ensure you're reading the correct credential
-   grep CODE_SERVER_PASSWORD /etc/pve-home-lab/credentials
+   grep CODE_SERVER_PASSWORD /etc/infrahaus/credentials
    ```
 
 3. **Password contains special characters:**
 
    ```bash
    # Check if password has quotes or spaces
-   cat /etc/pve-home-lab/credentials
+   cat /etc/infrahaus/credentials
    # Copy-paste exactly as shown
    ```
 
@@ -563,7 +563,7 @@ sudo vim /etc/systemd/system/code-server@.service
 
 ```bash
 # From ProxmoxVE host
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials > container-<container-id>-credentials.txt
+pct exec <container-id> -- cat /etc/infrahaus/credentials > container-<container-id>-credentials.txt
 
 # Store securely (encrypt if committing to git)
 gpg -c container-<container-id>-credentials.txt
@@ -588,7 +588,7 @@ gpg -c container-<container-id>-credentials.txt
 ```bash
 # After cloning, regenerate credentials
 pct enter <new-container-id>
-sudo rm /etc/pve-home-lab/credentials
+sudo rm /etc/infrahaus/credentials
 sudo systemctl restart config-manager
 
 # Or manually change passwords for each service
@@ -604,6 +604,6 @@ sudo systemctl restart config-manager
 
 For issues or questions:
 
-- GitHub Issues: https://github.com/kethalia/pve-home-lab/issues
+- GitHub Issues: https://github.com/kethalia/infrahaus/issues
 - Check troubleshooting section above
 - Review config-manager logs: `journalctl -u config-manager`

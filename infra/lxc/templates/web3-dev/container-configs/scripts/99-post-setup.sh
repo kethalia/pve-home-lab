@@ -106,7 +106,7 @@ log_info "✓ Temporary files cleaned"
 CONTAINER_IP=$(hostname -I | awk '{print $1}')
 
 # Load generated credentials
-CREDS_FILE="/etc/pve-home-lab/credentials"
+CREDS_FILE="/etc/infrahaus/credentials"
 if [[ -f "$CREDS_FILE" ]]; then
     # shellcheck disable=SC1090
     source "$CREDS_FILE"
@@ -147,7 +147,7 @@ cat << EOF
 
 🔐 View Credentials:
    
-   cat /etc/pve-home-lab/credentials
+   cat /etc/infrahaus/credentials
 
 🔑 Change Passwords:
    
@@ -190,7 +190,7 @@ cat << EOF
    4. Start coding!
 
 📚 Repository:
-   https://github.com/kethalia/pve-home-lab
+   https://github.com/kethalia/infrahaus
 
 ═══════════════════════════════════════════════════════════
 

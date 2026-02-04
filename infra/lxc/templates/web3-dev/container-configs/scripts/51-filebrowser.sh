@@ -6,7 +6,7 @@
 # - Root directory set to container user's home
 # - Web interface on port 8081
 #
-# Credentials stored in /etc/pve-home-lab/credentials
+# Credentials stored in /etc/infrahaus/credentials
 
 set -eo pipefail
 

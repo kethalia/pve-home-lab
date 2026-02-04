@@ -22,7 +22,7 @@ The LXC template system provides a declarative, git-based approach to creating a
 From your ProxmoxVE host shell:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 **Duration**: 5-10 minutes
@@ -32,12 +32,12 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/ma
 ```bash
 # Custom resources: 2 CPU, 4GB RAM, 30GB disk
 var_cpu=2 var_ram=4096 var_disk=30 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 
 # Custom repository and branch
 REPO_URL="https://github.com/yourusername/your-fork.git" \
 REPO_BRANCH="develop" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ## Resource Requirements
@@ -65,15 +65,15 @@ REPO_BRANCH="develop" \
 ssh root@proxmox-host
 
 # Run template script
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Method 2: Manual Installation
 
 ```bash
 # Clone repository
-git clone https://github.com/kethalia/pve-home-lab.git
-cd pve-home-lab/infra/lxc/templates/web3-dev
+git clone https://github.com/kethalia/infrahaus.git
+cd infrahaus/infra/lxc/templates/web3-dev
 
 # Review template.conf (optional)
 cat template.conf
@@ -133,7 +133,7 @@ All web services use randomly generated passwords created during first boot. Ret
 
 ```bash
 # View credentials file
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+pct exec <container-id> -- cat /etc/infrahaus/credentials
 
 # Or watch the welcome banner
 pct exec <container-id> -- journalctl -u config-manager -f --no-pager -o cat
@@ -143,7 +143,7 @@ pct exec <container-id> -- journalctl -u config-manager -f --no-pager -o cat
 
 ```bash
 # View credentials (requires root/sudo)
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 
 # Or check welcome message
 cat /etc/motd
@@ -186,7 +186,7 @@ REPO_BRANCH="main" \
 
 ### Creating Custom Templates
 
-See the [full setup documentation](https://github.com/kethalia/pve-home-lab/blob/main/infra/lxc/docs/SETUP.md#creating-custom-templates) for detailed instructions on creating your own templates.
+See the [full setup documentation](https://github.com/kethalia/infrahaus/blob/main/infra/lxc/docs/SETUP.md#creating-custom-templates) for detailed instructions on creating your own templates.
 
 ## Next Steps
 
@@ -198,4 +198,4 @@ See the [full setup documentation](https://github.com/kethalia/pve-home-lab/blob
 
 For the complete setup guide including detailed examples, customization options, and advanced topics, see:
 
-**[infra/lxc/docs/SETUP.md](https://github.com/kethalia/pve-home-lab/blob/main/infra/lxc/docs/SETUP.md)**
+**[infra/lxc/docs/SETUP.md](https://github.com/kethalia/infrahaus/blob/main/infra/lxc/docs/SETUP.md)**

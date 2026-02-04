@@ -6,7 +6,7 @@
 # - Random secure password
 # - Web interface on port 8082
 #
-# Credentials stored in /etc/pve-home-lab/credentials
+# Credentials stored in /etc/infrahaus/credentials
 # Note: OpenCode is optional - failure will not halt container setup
 
 set -eo pipefail

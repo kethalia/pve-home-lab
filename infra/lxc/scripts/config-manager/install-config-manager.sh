@@ -19,7 +19,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-readonly DEFAULT_REPO_URL="https://github.com/kethalia/pve-home-lab.git"
+readonly DEFAULT_REPO_URL="https://github.com/kethalia/infrahaus.git"
 readonly DEFAULT_BRANCH="main"
 readonly DEFAULT_CONFIG_PATH="infra/lxc/container-configs"
 

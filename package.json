@@ -1,5 +1,5 @@
 {
-  "name": "pve-home-lab",
+  "name": "infrahaus",
   "private": true,
   "scripts": {
     "dev": "turbo dev",

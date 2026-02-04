@@ -26,7 +26,7 @@ Note: install.sh is now shared across all templates at:
 
 ```bash
 # From ProxmoxVE host shell:
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Custom Configuration
@@ -34,16 +34,16 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/ma
 ```bash
 # Custom resources (2 CPU, 4GB RAM, 30GB disk)
 var_cpu=2 var_ram=4096 var_disk=30 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 
 # Custom repository and branch
 REPO_URL="https://github.com/myuser/my-fork.git" \
 REPO_BRANCH="develop" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 
 # Test feature branch (for developers)
 SCRIPT_BRANCH="feature/my-changes" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/feature/my-changes/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/feature/my-changes/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ## Container Specifications
@@ -62,7 +62,7 @@ SCRIPT_BRANCH="feature/my-changes" \
   - 8080: VS Code Server (password-protected)
   - 8081: FileBrowser (password-protected)
   - 8082: OpenCode (password-protected)
-- **Security:** Random passwords generated on first boot, stored in `/etc/pve-home-lab/credentials`
+- **Security:** Random passwords generated on first boot, stored in `/etc/infrahaus/credentials`
 
 ### Customizable via Environment Variables
 
@@ -128,7 +128,7 @@ Automatically installed from `container-configs/packages/`:
   - Modern web-based editing experience
   - Password-protected (random password on first boot)
 
-**Credentials:** All passwords are randomly generated during container setup and stored in `/etc/pve-home-lab/credentials` (mode 600, root-only). See [Credentials & Security](#credentials--security) section.
+**Credentials:** All passwords are randomly generated during container setup and stored in `/etc/infrahaus/credentials` (mode 600, root-only). See [Credentials & Security](#credentials--security) section.
 
 ## Configuration Management
 
@@ -164,7 +164,7 @@ web3-dev/container-configs/
 This template implements a secure credential management system:
 
 - **Random Generation:** All passwords are randomly generated (16 characters, A-Za-z0-9) during first boot
-- **Secure Storage:** Credentials stored in `/etc/pve-home-lab/credentials` (mode 600, root-only access)
+- **Secure Storage:** Credentials stored in `/etc/infrahaus/credentials` (mode 600, root-only access)
 - **No Defaults:** No hardcoded passwords - each container has unique credentials
 - **Easy Access:** Credentials displayed in welcome banner and accessible via simple commands
 
@@ -174,7 +174,7 @@ This template implements a secure credential management system:
 
 ```bash
 # View all credentials
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+pct exec <container-id> -- cat /etc/infrahaus/credentials
 
 # Stream welcome message with credentials
 pct exec <container-id> -- journalctl -u config-manager -f --no-pager -o cat
@@ -184,7 +184,7 @@ pct exec <container-id> -- journalctl -u config-manager -f --no-pager -o cat
 
 ```bash
 # View credentials file directly (requires root)
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 
 # Or use the welcome message command
 cat /etc/motd
@@ -244,7 +244,7 @@ sudo systemctl restart opencode@coder
 
 ```bash
 # Update stored credentials for reference
-sudo vim /etc/pve-home-lab/credentials
+sudo vim /etc/infrahaus/credentials
 ```
 
 ### Security Best Practices
@@ -302,10 +302,10 @@ OpenCode:         http://<container-ip>:8082
 
 ```bash
 # From ProxmoxVE host
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+pct exec <container-id> -- cat /etc/infrahaus/credentials
 
 # Inside container
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 ```
 
 **Features:**
@@ -319,7 +319,7 @@ sudo cat /etc/pve-home-lab/credentials
 
 **First Time Setup:**
 
-1. Retrieve credentials: `pct exec <container-id> -- cat /etc/pve-home-lab/credentials`
+1. Retrieve credentials: `pct exec <container-id> -- cat /etc/infrahaus/credentials`
 2. Open `http://<container-ip>:8080` in your browser
 3. Enter the `CODE_SERVER_PASSWORD` from credentials file
 4. Open folder: `/home/coder`
@@ -548,7 +548,7 @@ ufw status
 **Common Issues:**
 
 - **Can't access port 8080:** Check if code-server is running: `systemctl status code-server@coder`
-- **Password not working:** Get credentials: `sudo cat /etc/pve-home-lab/credentials`
+- **Password not working:** Get credentials: `sudo cat /etc/infrahaus/credentials`
 - **Credentials file missing:** Wait for config-manager to complete: `journalctl -u config-manager -f`
 - **Port conflicts:** Ensure ports 8080-8082 are not already in use: `ss -tlnp | grep ':808'`
 - **VS Code extensions not loading:** Check EXTENSIONS_GALLERY is set: `cat /etc/environment | grep EXTENSIONS`
@@ -621,7 +621,7 @@ pct set <container-id> -net0 name=eth0,bridge=vmbr0,firewall=1,ip=dhcp
 
 ### Reporting Issues
 
-Report issues at: https://github.com/kethalia/pve-home-lab/issues
+Report issues at: https://github.com/kethalia/infrahaus/issues
 
 ### Creating Templates
 
@@ -633,7 +633,7 @@ Share your custom templates by:
 
 ## License
 
-MIT - See [LICENSE](https://github.com/kethalia/pve-home-lab/blob/main/LICENSE)
+MIT - See [LICENSE](https://github.com/kethalia/infrahaus/blob/main/LICENSE)
 
 ## Related Documentation
 
