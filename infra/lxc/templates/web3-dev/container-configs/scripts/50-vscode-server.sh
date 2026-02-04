@@ -110,9 +110,6 @@ EOF
 install_vscode_extensions() {
     log_info "Installing VS Code extensions for code-server..."
     
-    # Export EXTENSIONS_GALLERY for this session (ensures run_as_user calls have it)
-    export EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items"}'
-    
     # Wait for code-server to be fully started
     sleep 5
     
@@ -140,7 +137,10 @@ install_vscode_extensions() {
         "wayou.vscode-todo-highlight"
     )
     
-    log_info "Installing ${#EXTENSIONS[@]} extensions..."
+    # Export EXTENSIONS_GALLERY for this session (run_as_user will pass it through)
+    export EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items"}'
+    
+    log_info "Installing ${#EXTENSIONS[@]} extensions from Microsoft marketplace..."
     
     INSTALLED=0
     FAILED=0
