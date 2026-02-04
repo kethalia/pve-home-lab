@@ -1,11 +1,11 @@
 ---
-title: Infrastructure
-description: LXC containers with git-based configuration management for reproducible, version-controlled development environments.
+title: Container Templates
+description: One-command customizable LXC containers for Proxmox with git-based configuration management for reproducible, version-controlled development environments.
 ---
 
 ## Overview
 
-The infrastructure layer provides reproducible, version-controlled development environments using LXC containers with git-based configuration management. Everything is defined as code — packages, scripts, configuration files — enabling instant environment recreation and team standardization.
+Deploy production-ready LXC containers on Proxmox with a single command. Each template is fully customizable with git-based configuration management — define your packages, scripts, and dotfiles as code. One-command deployment gives you reproducible environments with automatic updates, snapshots, and team standardization.
 
 ## LXC Configuration Management
 
@@ -179,13 +179,13 @@ Templates use unprivileged LXC containers by default for enhanced security:
 
 ## Documentation Sections
 
-Comprehensive documentation for all aspects of the LXC infrastructure:
+Comprehensive documentation for the container template system:
 
-- [**LXC Setup**](/docs/infrastructure/lxc-setup) — Installation, quick start, resource requirements, first-boot walkthrough, and creating custom templates
-- [**LXC Configuration**](/docs/infrastructure/lxc-configuration) — Complete reference for config-manager: scripts, files, packages, snapshots, conflict resolution, and advanced topics
-- [**LXC Credentials**](/docs/infrastructure/lxc-credentials) — Credential management, password rotation, security best practices for web services
-- [**LXC Migration**](/docs/infrastructure/lxc-migration) — Migrating from Coder workspaces, Docker Compose, bare-metal setups, and cloud IDEs with step-by-step guides
-- [**LXC Troubleshooting**](/docs/infrastructure/lxc-troubleshooting) — Common issues, diagnostic commands, and solutions for service failures, git sync problems, and performance issues
+- [**Setup**](/docs/container-templates/setup) — Installation, quick start, resource requirements, first-boot walkthrough, and creating custom templates
+- [**Configuration**](/docs/container-templates/configuration) — Complete reference for config-manager: scripts, files, packages, snapshots, conflict resolution, and advanced topics
+- [**Credentials**](/docs/container-templates/credentials) — Credential management, password rotation, security best practices for web services
+- [**Migration**](/docs/container-templates/migration) — Migrating from Coder workspaces, Docker Compose, bare-metal setups, and cloud IDEs with step-by-step guides
+- [**Troubleshooting**](/docs/container-templates/troubleshooting) — Common issues, diagnostic commands, and solutions for service failures, git sync problems, and performance issues
 
 ## Use Cases
 
@@ -311,7 +311,7 @@ config-rollback list
 - **Conflicts detected**: Review conflicts log, resolve manually or rollback
 - **Package install failed**: Check package name, repository availability
 
-See [LXC Troubleshooting](/docs/infrastructure/lxc-troubleshooting) for detailed solutions.
+See [Troubleshooting](/docs/container-templates/troubleshooting) for detailed solutions.
 
 ## Contributing
 
@@ -333,7 +333,7 @@ Found an error or have a better explanation? Submit a PR to update the docs.
 
 ## Next Steps
 
-- **New to LXC?** Start with [LXC Setup](/docs/infrastructure/lxc-setup) for installation and quick start
-- **Customizing configs?** See [LXC Configuration](/docs/infrastructure/lxc-configuration) for complete reference
-- **Migrating?** Check [LXC Migration](/docs/infrastructure/lxc-migration) for step-by-step guides
-- **Having issues?** Consult [LXC Troubleshooting](/docs/infrastructure/lxc-troubleshooting) for solutions
+- **New to LXC?** Start with [Setup](/docs/container-templates/setup) for installation and quick start
+- **Customizing configs?** See [Configuration](/docs/container-templates/configuration) for complete reference
+- **Migrating?** Check [Migration](/docs/container-templates/migration) for step-by-step guides
+- **Having issues?** Consult [Troubleshooting](/docs/container-templates/troubleshooting) for solutions

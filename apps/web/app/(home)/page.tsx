@@ -2,6 +2,13 @@ import Link from "next/link";
 
 const features = [
   {
+    title: "Container Templates",
+    description:
+      "One-command customizable LXC containers for Proxmox with git-based config management.",
+    href: "/docs/container-templates",
+    icon: "[]",
+  },
+  {
     title: "Getting Started",
     description:
       "Hardware recommendations, Proxmox VE setup, Docker installation, and network topology.",
@@ -108,8 +115,8 @@ export default function HomePage() {
           What&apos;s inside
         </h2>
         <p className="mb-12 text-center text-fd-muted-foreground">
-          Eight service categories, each fully documented with Docker Compose
-          configs, environment variables, and setup guides.
+          Nine service categories, each fully documented with setup guides,
+          configs, and best practices.
         </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
