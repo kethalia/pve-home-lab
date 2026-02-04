@@ -128,6 +128,18 @@ systemctl enable config-manager.service || {
   exit 1
 }
 
+# Ensure git is installed before starting config-manager
+msg_info "Ensuring git is installed"
+if ! command -v git &>/dev/null; then
+  apt-get update -qq && apt-get install -y -qq git
+fi
+
+if ! command -v git &>/dev/null; then
+  msg_error "Failed to install git - config-manager requires git"
+  exit 1
+fi
+msg_ok "Git is installed"
+
 # Start the service to perform initial sync
 msg_info "Running initial configuration sync"
 if ! systemctl start config-manager.service; then
