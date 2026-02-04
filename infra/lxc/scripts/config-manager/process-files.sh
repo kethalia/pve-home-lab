@@ -23,7 +23,9 @@
 #   REPO_DIR=/opt/config-manager/repo CONFIG_PATH=infra/lxc/container-configs \
 #     bash process-files.sh [--dry-run]
 
-set -euo pipefail
+# Note: We use 'set -eo pipefail' without -u to avoid issues with kcov instrumentation
+# and BASH_SOURCE in certain sourcing contexts (e.g., bash -c "source ...")
+set -eo pipefail
 
 # ---------------------------------------------------------------------------
 # Standalone mode: provide logging stubs if not sourced from config-sync.sh
@@ -278,7 +280,7 @@ process_files() {
 # ---------------------------------------------------------------------------
 # Run if executed directly (not sourced)
 # ---------------------------------------------------------------------------
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]]; then
     # Require REPO_DIR and CONFIG_PATH for standalone execution
     if [[ -z "${REPO_DIR:-}" ]] || [[ -z "${CONFIG_PATH:-}" ]]; then
         echo "Usage: REPO_DIR=/path/to/repo CONFIG_PATH=infra/lxc/container-configs bash $0 [--dry-run]" >&2

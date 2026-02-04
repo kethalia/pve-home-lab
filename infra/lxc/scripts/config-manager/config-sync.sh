@@ -13,7 +13,9 @@
 #   4  — git operation failed (and no cached state available)
 #   5  — conflicts detected between local changes and git updates
 
-set -euo pipefail
+# Note: We use 'set -eo pipefail' without -u to avoid issues with kcov instrumentation
+# and BASH_SOURCE in certain sourcing contexts (e.g., bash -c "source ...")
+set -eo pipefail
 
 # ---------------------------------------------------------------------------
 # Constants

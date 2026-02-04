@@ -26,7 +26,7 @@ readonly _HANDLER_CUSTOM_LOADED=1
 # ---------------------------------------------------------------------------
 # Logging — source shared logging utilities
 # ---------------------------------------------------------------------------
-readonly _HANDLER_DIR="${_HANDLER_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+readonly _HANDLER_DIR="${_HANDLER_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
 # shellcheck source=/dev/null
 [[ -f "${_HANDLER_DIR}/handler-logging.sh" ]] && source "${_HANDLER_DIR}/handler-logging.sh"
 source_logging_stubs
@@ -272,7 +272,7 @@ custom_parse_and_install() {
 # ---------------------------------------------------------------------------
 # Direct execution support (for testing)
 # ---------------------------------------------------------------------------
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]]; then
     set -euo pipefail
     
     case "${1:-}" in

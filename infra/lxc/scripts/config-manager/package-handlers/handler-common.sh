@@ -24,7 +24,7 @@ readonly _HANDLER_COMMON_LOADED=1
 # ---------------------------------------------------------------------------
 # Package handler directory — co-located with this script
 # ---------------------------------------------------------------------------
-readonly _HANDLER_DIR="${_HANDLER_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+readonly _HANDLER_DIR="${_HANDLER_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
 
 # ---------------------------------------------------------------------------
 # Logging — source shared logging utilities
@@ -442,7 +442,7 @@ install_packages() {
 # ---------------------------------------------------------------------------
 # Direct execution support (for testing)
 # ---------------------------------------------------------------------------
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]]; then
     set -euo pipefail
     install_packages "${1:-.}"
 fi

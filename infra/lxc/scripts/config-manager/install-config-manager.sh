@@ -172,7 +172,7 @@ EOF
 # ---------------------------------------------------------------------------
 install_files() {
     local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
     # Validate source files exist
     for file in config-sync.sh config-manager.service; do

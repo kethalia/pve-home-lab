@@ -16,9 +16,9 @@ SCRIPT_BRANCH="fix/web3-dev-unprivileged-and-install"  # Will be changed to 'mai
 
 # Source template configuration
 # Works both when run locally and via curl from ProxmoxVE
-if [[ -f "$(dirname "${BASH_SOURCE[0]}")/template.conf" ]]; then
+if [[ -f "$(dirname "${BASH_SOURCE[0]:-$0}")/template.conf" ]]; then
   # Local execution
-  source "$(dirname "${BASH_SOURCE[0]}")/template.conf"
+  source "$(dirname "${BASH_SOURCE[0]:-$0}")/template.conf"
 else
   # Remote execution via curl
   source <(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/${SCRIPT_BRANCH}/infra/lxc/templates/web3-dev/template.conf)

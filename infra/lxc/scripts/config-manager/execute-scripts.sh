@@ -15,7 +15,9 @@
 #   REPO_DIR=/opt/config-manager/repo CONFIG_PATH=infra/lxc/container-configs \
 #     bash execute-scripts.sh [--dry-run]
 
-set -euo pipefail
+# Note: We use 'set -eo pipefail' without -u to avoid issues with kcov instrumentation
+# and BASH_SOURCE in certain sourcing contexts (e.g., bash -c "source ...")
+set -eo pipefail
 
 # ---------------------------------------------------------------------------
 # Standalone mode: provide logging stubs if not sourced from config-sync.sh
@@ -39,7 +41,7 @@ if [[ -f "$_HELPERS_PATH" ]]; then
     source "$_HELPERS_PATH"
 else
     # Fallback: try path relative to this script (development / testing)
-    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
     if [[ -f "${_SCRIPT_DIR}/config-manager-helpers.sh" ]]; then
         # shellcheck source=config-manager-helpers.sh
         source "${_SCRIPT_DIR}/config-manager-helpers.sh"
@@ -213,7 +215,7 @@ execute_scripts() {
 # ---------------------------------------------------------------------------
 # Run if executed directly (not sourced)
 # ---------------------------------------------------------------------------
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]]; then
     if [[ -z "${REPO_DIR:-}" ]] || [[ -z "${CONFIG_PATH:-}" ]]; then
         echo "Usage: REPO_DIR=/path/to/repo CONFIG_PATH=infra/lxc/container-configs bash $0 [--dry-run]" >&2
         exit 1

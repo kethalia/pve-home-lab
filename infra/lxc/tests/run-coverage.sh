@@ -3,9 +3,11 @@
 #
 # Uses kcov to track line coverage of bash scripts during BATS tests
 
-set -euo pipefail
+# Note: We use 'set -eo pipefail' (without -u) because kcov's instrumentation
+# can cause BASH_SOURCE to be unbound in some contexts, even when protected with ${BASH_SOURCE[0]:-}
+set -eo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 COVERAGE_DIR="${SCRIPT_DIR}/coverage"
 mkdir -p "$COVERAGE_DIR"
 

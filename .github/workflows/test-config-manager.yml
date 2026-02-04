@@ -72,11 +72,9 @@ jobs:
     needs: [unit-tests]
     steps:
       - uses: actions/checkout@v4
-
       - name: Build test image with kcov
         working-directory: infra/lxc/tests
         run: docker build -t cm-test-coverage -f Dockerfile.unit ../../../
-
       - name: Run tests with coverage
         run: |
           mkdir -p infra/lxc/tests/coverage
@@ -84,13 +82,11 @@ jobs:
             -v "${{ github.workspace }}/infra/lxc/tests/coverage:/workspace/infra/lxc/tests/coverage" \
             cm-test-coverage \
             bash /workspace/infra/lxc/tests/run-coverage.sh
-
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: infra/lxc/tests/coverage/
-
       - name: Coverage summary
         run: |
           if [ -f infra/lxc/tests/coverage/index.json ]; then
@@ -112,7 +108,7 @@ jobs:
 
       - name: Build integration test image
         working-directory: infra/lxc/tests
-        run: docker build -t cm-test-integration -f Dockerfile.integration .
+        run: docker build -t cm-test-integration -f Dockerfile.integration ../../../
 
       - name: Run integration tests
         run: |
