@@ -300,7 +300,7 @@ install_opencode() {
     
     # Run as the container user
     run_as_user bash -c "
-        curl -fsSL https://raw.githubusercontent.com/coder/opencode/main/install.sh | sh
+        curl -fsSL https://opencode.ai/install | sh
     "
     
     # Add opencode to PATH
@@ -324,11 +324,12 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/%i/.opencode/bin/opencode serve --port 8082 --host 0.0.0.0
+ExecStart=/home/%i/.opencode/bin/opencode web --port 8082 --hostname 0.0.0.0
 Restart=always
 User=%i
 WorkingDirectory=/home/%i
 Environment="PATH=/home/%i/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="OPENCODE_SERVER_PASSWORD=coder"
 
 [Install]
 WantedBy=default.target
