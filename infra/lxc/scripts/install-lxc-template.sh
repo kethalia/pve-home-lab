@@ -41,6 +41,8 @@ mkdir -p /etc/config-manager
 mkdir -p /var/log/config-manager
 mkdir -p /var/lib/config-manager/{backups,state}
 mkdir -p /opt/config-manager
+mkdir -p /usr/local/lib/config-manager/package-handlers
+mkdir -p /run/config-manager
 
 # Write configuration file
 msg_info "Creating configuration file"
