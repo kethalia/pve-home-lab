@@ -105,6 +105,19 @@ log_info "✓ Temporary files cleaned"
 # Get container IP address
 CONTAINER_IP=$(hostname -I | awk '{print $1}')
 
+# Load generated credentials
+CREDS_FILE="/etc/pve-home-lab/credentials"
+if [[ -f "$CREDS_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$CREDS_FILE"
+fi
+
+# Set defaults if credentials weren't generated
+CODE_SERVER_PASSWORD="${CODE_SERVER_PASSWORD:-<not-set>}"
+FILEBROWSER_USERNAME="${FILEBROWSER_USERNAME:-admin}"
+FILEBROWSER_PASSWORD="${FILEBROWSER_PASSWORD:-<not-set>}"
+OPENCODE_PASSWORD="${OPENCODE_PASSWORD:-<not-set>}"
+
 cat << EOF
 
 ═══════════════════════════════════════════════════════════
@@ -120,16 +133,33 @@ cat << EOF
 🌐 Web-Based Development:
    
    VS Code Server:  http://${CONTAINER_IP}:8080
-                    Password: coder
+                    Password: ${CODE_SERVER_PASSWORD}
                     Extensions: Solidity, Tailwind, Prisma, GitLens,
                                Docker, Terraform, GraphQL, and more
                     
    FileBrowser:     http://${CONTAINER_IP}:8081
-                    Username: admin
-                    Password: coder
+                    Username: ${FILEBROWSER_USERNAME}
+                    Password: ${FILEBROWSER_PASSWORD}
    
    OpenCode:        http://${CONTAINER_IP}:8082
+                    Password: ${OPENCODE_PASSWORD}
                     Alternative web editor
+
+🔐 View Credentials:
+   
+   cat /etc/pve-home-lab/credentials
+
+🔑 Change Passwords:
+   
+   code-server:     Edit PASSWORD= in /etc/systemd/system/code-server@.service
+                    then: systemctl daemon-reload && systemctl restart code-server@coder
+   
+   filebrowser:     filebrowser users update ${FILEBROWSER_USERNAME} \\
+                      -p <newpass> -d /etc/filebrowser/filebrowser.db
+                    then: systemctl restart filebrowser
+   
+   opencode:        Edit OPENCODE_SERVER_PASSWORD= in /etc/systemd/system/opencode@.service
+                    then: systemctl daemon-reload && systemctl restart opencode@coder
 
 🔌 Terminal Access:
    
@@ -155,7 +185,7 @@ cat << EOF
 💡 Quick Start:
    
    1. Open http://${CONTAINER_IP}:8080 in your browser
-   2. Enter password: coder
+   2. Enter password shown above
    3. Open folder: /home/coder/projects
    4. Start coding!
 

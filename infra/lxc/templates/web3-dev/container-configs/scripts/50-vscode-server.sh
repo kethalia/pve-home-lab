@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# 50-vscode-server.sh — Install browser-based development tools
+# 50-vscode-server.sh — Install VS Code Server (code-server)
 #
-# Installs and configures:
-# - code-server: VS Code in the browser with extensions
-# - filebrowser: Web-based file manager
+# Installs and configures code-server (VS Code in the browser) with:
+# - Extensions for web3 development
+# - Custom settings (OLED theme, Fira Code, etc.)
+# - Random secure password
 #
-# Services are exposed on:
-# - code-server: port 8080 (password: coder)
-# - filebrowser: port 8081 (admin/coder)
+# Service exposed on port 8080 with password stored in /etc/pve-home-lab/credentials
 
-set -euo pipefail
+set -eo pipefail
 
-log_info "=== Installing Browser-Based Development Tools ==="
+log_info "=== Installing VS Code Server (code-server) ==="
 
 # ============================================================================
 # code-server (VS Code in browser)
@@ -57,9 +56,14 @@ install_code_server() {
     CODE_SERVER_VERSION=$(code-server --version | head -1)
     log_info "✓ code-server installed: ${CODE_SERVER_VERSION}"
     
+    # Generate random password
+    log_info "Generating secure password for code-server..."
+    CODE_SERVER_PASSWORD=$(generate_password 16)
+    save_credential "CODE_SERVER_PASSWORD" "$CODE_SERVER_PASSWORD"
+    
     # Create systemd service for code-server
     log_info "Creating systemd service for code-server..."
-    cat > /etc/systemd/system/code-server@.service <<'EOF'
+    cat > /etc/systemd/system/code-server@.service <<EOF
 [Unit]
 Description=code-server
 After=network.target
@@ -69,7 +73,7 @@ Type=exec
 ExecStart=/usr/bin/code-server --bind-addr 0.0.0.0:8080 --auth password
 Restart=always
 User=%i
-Environment=PASSWORD=coder
+Environment=PASSWORD=${CODE_SERVER_PASSWORD}
 
 [Install]
 WantedBy=default.target
@@ -79,7 +83,7 @@ EOF
     systemctl enable code-server@"$CONTAINER_USER"
     systemctl start code-server@"$CONTAINER_USER"
     
-    log_info "✓ code-server installed and running on port 8080 (password: coder)"
+    log_info "✓ code-server installed and running on port 8080"
 }
 
 # ============================================================================
@@ -196,161 +200,6 @@ EOF
 }
 
 # ============================================================================
-# filebrowser (Web-based file manager)
-# ============================================================================
-
-install_filebrowser() {
-    log_info "Installing filebrowser (web-based file manager)..."
-    
-    # Check if filebrowser is already installed
-    if is_installed filebrowser; then
-        FILEBROWSER_VERSION=$(filebrowser version 2>/dev/null || echo "unknown")
-        log_info "filebrowser is already installed: ${FILEBROWSER_VERSION}"
-        
-        # Verify service is running
-        if systemctl is-active filebrowser >/dev/null 2>&1; then
-            log_info "✓ filebrowser service is running"
-        else
-            log_info "Starting filebrowser service..."
-            systemctl start filebrowser
-        fi
-        
-        return 0
-    fi
-    
-    # Download and install filebrowser
-    log_info "Downloading filebrowser installer..."
-    curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash
-    
-    # Verify installation
-    if ! is_installed filebrowser; then
-        log_error "filebrowser installation verification failed"
-        return 1
-    fi
-    
-    log_info "✓ filebrowser installed"
-    
-    # Create filebrowser config
-    log_info "Creating filebrowser configuration..."
-    mkdir -p /etc/filebrowser
-    
-    cat > /etc/filebrowser/config.json <<EOF
-{
-  "port": 8081,
-  "baseURL": "",
-  "address": "0.0.0.0",
-  "log": "stdout",
-  "database": "/etc/filebrowser/filebrowser.db",
-  "root": "/home/${CONTAINER_USER}"
-}
-EOF
-    
-    # Create systemd service
-    cat > /etc/systemd/system/filebrowser.service <<'EOF'
-[Unit]
-Description=File Browser
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/filebrowser -c /etc/filebrowser/config.json
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    
-    # Initialize database and set admin user
-    log_info "Initializing filebrowser database..."
-    filebrowser -d /etc/filebrowser/filebrowser.db config init
-    filebrowser -d /etc/filebrowser/filebrowser.db users add admin coder --perm.admin
-    
-    systemctl daemon-reload
-    systemctl enable filebrowser
-    systemctl start filebrowser
-    
-    log_info "✓ filebrowser installed and running on port 8081 (admin/coder)"
-}
-
-# ============================================================================
-# opencode (Alternative web-based code editor)
-# ============================================================================
-
-install_opencode() {
-    log_info "Installing opencode (web-based code editor)..."
-    
-    # Check if opencode is already installed
-    if run_as_user bash -c "command -v opencode" >/dev/null 2>&1; then
-        log_info "opencode is already installed"
-        
-        # Verify service is running
-        if systemctl is-active opencode@"$CONTAINER_USER" >/dev/null 2>&1; then
-            log_info "✓ opencode service is running"
-        else
-            log_info "Starting opencode service..."
-            systemctl start opencode@"$CONTAINER_USER"
-        fi
-        
-        return 0
-    fi
-    
-    # Install opencode via official installer
-    log_info "Downloading opencode installer..."
-    
-    # Run as the container user
-    run_as_user bash -c "
-        curl -fsSL https://opencode.ai/install | bash
-    "
-    
-    # Add opencode to PATH
-    OPENCODE_PATH="/home/${CONTAINER_USER}/.opencode/bin"
-    
-    # Verify installation
-    if [[ ! -d "$OPENCODE_PATH" ]] || ! run_as_user bash -c "export PATH='$OPENCODE_PATH:\$PATH' && command -v opencode" >/dev/null 2>&1; then
-        log_warn "opencode installation verification failed (may need manual intervention)"
-        log_warn "opencode is optional - continuing with setup"
-        return 1
-    fi
-    
-    log_info "✓ opencode installed to: ${OPENCODE_PATH}"
-    
-    # Create systemd service for opencode
-    log_info "Creating systemd service for opencode..."
-    cat > /etc/systemd/system/opencode@.service <<'EOF'
-[Unit]
-Description=OpenCode Web Editor
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/home/%i/.opencode/bin/opencode web --port 8082 --hostname 0.0.0.0
-Restart=always
-User=%i
-WorkingDirectory=/home/%i
-Environment="PATH=/home/%i/.opencode/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Environment="OPENCODE_SERVER_PASSWORD=coder"
-
-[Install]
-WantedBy=default.target
-EOF
-    
-    systemctl daemon-reload
-    systemctl enable opencode@"$CONTAINER_USER"
-    systemctl start opencode@"$CONTAINER_USER"
-    
-    # Wait for service to start
-    sleep 3
-    
-    if systemctl is-active opencode@"$CONTAINER_USER" >/dev/null 2>&1; then
-        log_info "✓ opencode installed and running on port 8082"
-    else
-        log_warn "opencode service may not have started correctly"
-        log_warn "Check logs: journalctl -u opencode@$CONTAINER_USER"
-    fi
-}
-
-# ============================================================================
 # Main installation
 # ============================================================================
 
@@ -376,29 +225,4 @@ else
     log_error "VS Code settings configuration failed"
 fi
 
-# Install filebrowser
-if install_filebrowser; then
-    log_info "✓ filebrowser installation complete"
-else
-    log_error "filebrowser installation failed"
-fi
-
-# Install opencode
-if install_opencode; then
-    log_info "✓ opencode installation complete"
-else
-    log_warn "opencode installation failed (optional - continuing)"
-fi
-
-# ============================================================================
-# Summary
-# ============================================================================
-
-log_info "=== Web Tools Installation Complete ==="
-log_info ""
-log_info "Access URLs (replace <container-ip> with your container's IP):"
-log_info "  - VS Code:      http://<container-ip>:8080  (password: coder)"
-log_info "  - FileBrowser:  http://<container-ip>:8081  (admin/coder)"
-log_info "  - OpenCode:     http://<container-ip>:8082"
-log_info ""
-log_info "All services are running and will start automatically on boot."
+log_info "=== VS Code Server Installation Complete ==="

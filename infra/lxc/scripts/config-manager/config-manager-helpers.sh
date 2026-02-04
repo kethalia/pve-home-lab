@@ -255,3 +255,50 @@ run_as_user() {
         USER="$CONTAINER_USER" \
         "$@"
 }
+
+# ---------------------------------------------------------------------------
+# generate_password — Generate a random secure password
+#
+# Usage: password=$(generate_password [length])
+#        password=$(generate_password)      # defaults to 16 characters
+#        password=$(generate_password 24)   # 24 character password
+#
+# Generates a cryptographically random password using /dev/urandom.
+# Character set: A-Z, a-z, 0-9 (62 possible characters)
+# ---------------------------------------------------------------------------
+generate_password() {
+    local length="${1:-16}"
+    tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$length"
+}
+
+# ---------------------------------------------------------------------------
+# save_credential — Append credential to shared credentials file
+#
+# Usage: save_credential "KEY" "value"
+#        save_credential "CODE_SERVER_PASSWORD" "aB3dEf7hIjKl"
+#
+# Creates /etc/pve-home-lab/credentials with mode 600 (root-only) and
+# appends key=value pairs for use by other scripts and welcome messages.
+# ---------------------------------------------------------------------------
+save_credential() {
+    local key="$1"
+    local value="$2"
+    local creds_file="/etc/pve-home-lab/credentials"
+    
+    # Ensure directory exists
+    mkdir -p "$(dirname "$creds_file")"
+    
+    # Create file with timestamp header on first write
+    if [[ ! -f "$creds_file" ]]; then
+        {
+            echo "# Auto-generated credentials for Web3 Dev Container"
+            echo "# Generated: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "# WARNING: This file contains sensitive passwords - keep secure"
+            echo ""
+        } > "$creds_file"
+        chmod 600 "$creds_file"
+    fi
+    
+    # Append credential
+    echo "${key}=${value}" >> "$creds_file"
+}
