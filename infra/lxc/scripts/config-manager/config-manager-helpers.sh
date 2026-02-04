@@ -229,10 +229,27 @@ export_script_env() {
 # shebangs to fail because env can't find bash/node/etc in PATH.
 #
 # Solution: Explicitly set full PATH and HOME when running as user.
+# Dynamically resolve NVM node path since globs don't expand in quotes.
 # ---------------------------------------------------------------------------
 run_as_user() {
+    # Resolve NVM node bin path (glob won't expand in quotes, need to expand it here)
+    local nvm_node_bin=""
+    for d in /home/$CONTAINER_USER/.nvm/versions/node/*/bin; do
+        # Only use the directory if it actually exists (glob didn't match returns literal *)
+        if [[ -d "$d" ]]; then
+            nvm_node_bin="$d"
+            break  # Use first match (typically only one node version installed)
+        fi
+    done
+    
+    # Build PATH with user tool directories
+    local user_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    user_path="$user_path:/home/$CONTAINER_USER/.local/bin"
+    user_path="$user_path:/home/$CONTAINER_USER/.foundry/bin"
+    [[ -n "$nvm_node_bin" ]] && user_path="$user_path:$nvm_node_bin"
+    
     sudo -u "$CONTAINER_USER" env \
-        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/$CONTAINER_USER/.local/bin:/home/$CONTAINER_USER/.foundry/bin:/home/$CONTAINER_USER/.nvm/versions/node/*/bin" \
+        PATH="$user_path" \
         HOME="/home/$CONTAINER_USER" \
         USER="$CONTAINER_USER" \
         "$@"
