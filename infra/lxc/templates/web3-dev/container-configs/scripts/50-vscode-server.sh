@@ -56,6 +56,22 @@ install_code_server() {
     CODE_SERVER_VERSION=$(code-server --version | head -1)
     log_info "✓ code-server installed: ${CODE_SERVER_VERSION}"
     
+    # Set EXTENSIONS_GALLERY environment variable for Microsoft marketplace access
+    log_info "Configuring VS Code marketplace access..."
+    
+    # 1. Add to /etc/environment (system-wide, picked up by PAM/sudo/login shells)
+    if ! grep -q "EXTENSIONS_GALLERY" /etc/environment 2>/dev/null; then
+        echo 'EXTENSIONS_GALLERY={"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery"}' >> /etc/environment
+    fi
+    
+    # 2. Add to user's .bashrc (interactive shells)
+    BASHRC_FILE="/home/${CONTAINER_USER}/.bashrc"
+    if ! grep -q "EXTENSIONS_GALLERY" "$BASHRC_FILE" 2>/dev/null; then
+        echo '' >> "$BASHRC_FILE"
+        echo '# VS Code Marketplace access for code-server' >> "$BASHRC_FILE"
+        echo 'export EXTENSIONS_GALLERY='"'"'{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery"}'"'"'' >> "$BASHRC_FILE"
+    fi
+    
     # Generate random password
     log_info "Generating secure password for code-server..."
     CODE_SERVER_PASSWORD=$(generate_password 16)
@@ -74,6 +90,7 @@ ExecStart=/usr/bin/code-server --bind-addr 0.0.0.0:8080 --auth password
 Restart=always
 User=%i
 Environment=PASSWORD=${CODE_SERVER_PASSWORD}
+Environment="EXTENSIONS_GALLERY={\"serviceUrl\":\"https://marketplace.visualstudio.com/_apis/public/gallery\"}"
 
 [Install]
 WantedBy=default.target
@@ -92,6 +109,9 @@ EOF
 
 install_vscode_extensions() {
     log_info "Installing VS Code extensions for code-server..."
+    
+    # Export EXTENSIONS_GALLERY for this session (ensures run_as_user calls have it)
+    export EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery"}'
     
     # Wait for code-server to be fully started
     sleep 5
