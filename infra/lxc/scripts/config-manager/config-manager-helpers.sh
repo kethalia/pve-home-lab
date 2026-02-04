@@ -249,11 +249,15 @@ run_as_user() {
     user_path="$user_path:/home/$CONTAINER_USER/.npm-global/bin"
     [[ -n "$nvm_node_bin" ]] && user_path="$user_path:$nvm_node_bin"
     
-    sudo -u "$CONTAINER_USER" env \
-        PATH="$user_path" \
-        HOME="/home/$CONTAINER_USER" \
-        USER="$CONTAINER_USER" \
-        "$@"
+    # Pass through EXTENSIONS_GALLERY if set (for code-server extension installs)
+    local env_vars=(
+        PATH="$user_path"
+        HOME="/home/$CONTAINER_USER"
+        USER="$CONTAINER_USER"
+    )
+    [[ -n "${EXTENSIONS_GALLERY:-}" ]] && env_vars+=("EXTENSIONS_GALLERY=$EXTENSIONS_GALLERY")
+    
+    sudo -u "$CONTAINER_USER" env "${env_vars[@]}" "$@"
 }
 
 # ---------------------------------------------------------------------------
