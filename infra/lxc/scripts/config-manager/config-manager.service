@@ -15,13 +15,12 @@ StandardError=journal
 SyslogIdentifier=config-manager
 
 # Security hardening
-# Note: ProtectSystem=strict with explicit ReadWritePaths for:
-# - Config-manager data: /var/log, /opt, /etc/config-manager, /var/lib
-# - Helper script installation: /usr/local/lib, /usr/local/bin
-# - User management: /etc/passwd, /etc/group, /etc/shadow, /etc/gshadow, /etc/subuid, /etc/subgid (for useradd/usermod)
-# - System configuration: /etc/sudoers.d (for sudo setup), /home (for user configs), /etc/systemd/system (for service files)
-ProtectSystem=strict
-ReadWritePaths=/var/log/config-manager /opt/config-manager /etc/config-manager /var/lib/config-manager /usr/local/lib/config-manager /usr/local/bin /etc/passwd /etc/group /etc/shadow /etc/gshadow /etc/subuid /etc/subgid /etc/sudoers.d /home /etc/systemd/system
+# Note: Using ProtectSystem=full instead of strict due to user management requirements.
+# useradd/usermod need to create lock files (.lock) in /etc which requires /etc write access.
+# With ProtectSystem=strict, even whitelisting individual files doesn't allow lock file creation.
+# ProtectSystem=full makes /etc writable while protecting /usr and /boot.
+ProtectSystem=full
+ReadWritePaths=/var/log/config-manager /opt/config-manager /var/lib/config-manager /usr/local/lib/config-manager /usr/local/bin
 RuntimeDirectory=config-manager
 PrivateTmp=yes
 NoNewPrivileges=yes

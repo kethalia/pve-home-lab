@@ -1,14 +1,10 @@
 #!/usr/bin/env bats
-# test-service-permissions.bats — Verify ProtectSystem=strict paths
-# These tests verify that all paths the config-manager needs to write to
-# are properly listed in ReadWritePaths
+# test-service-permissions.bats - Verify ProtectSystem and ReadWritePaths
+# These tests verify that the service has appropriate security settings
 
 load '../bats-helpers'
 
-setup() {
-    # Parse ReadWritePaths from the service file
-    SERVICE_FILE="${PROJECT_ROOT}/infra/lxc/scripts/config-manager/config-manager.service"
-}
+SERVICE_FILE="${PROJECT_ROOT}/infra/lxc/scripts/config-manager/config-manager.service"
 
 @test "service: ReadWritePaths includes /var/log/config-manager" {
     run grep "ReadWritePaths" "$SERVICE_FILE"
@@ -20,9 +16,9 @@ setup() {
     assert_output --partial "/opt/config-manager"
 }
 
-@test "service: ReadWritePaths includes /etc/config-manager" {
+@test "service: ReadWritePaths includes /var/lib/config-manager" {
     run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/config-manager"
+    assert_output --partial "/var/lib/config-manager"
 }
 
 @test "service: ReadWritePaths includes /usr/local/lib/config-manager" {
@@ -35,43 +31,16 @@ setup() {
     assert_output --partial "/usr/local/bin"
 }
 
-@test "service: ReadWritePaths includes /etc/sudoers.d (bug fix)" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/sudoers.d"
-}
-
-@test "service: ReadWritePaths includes /home" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/home"
-}
-
-@test "service: uses ProtectSystem=strict (not full)" {
+@test "service: uses ProtectSystem=full (not strict due to useradd lock file requirements)" {
+    # useradd creates lock files in /etc which requires directory write access
+    # ProtectSystem=strict doesn't allow this even with individual file whitelisting
     run grep "ProtectSystem" "$SERVICE_FILE"
-    assert_output --partial "strict"
-    refute_output --partial "full"
+    assert_output --partial "full"
+    refute_output --partial "strict"
 }
 
-@test "service: ReadWritePaths includes /etc/systemd/system (for service creation)" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/systemd/system"
-}
-
-@test "service: ReadWritePaths includes /etc/passwd (for user creation)" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/passwd"
-}
-
-@test "service: ReadWritePaths includes /etc/group (for user creation)" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/group"
-}
-
-@test "service: ReadWritePaths includes /etc/shadow (for user creation)" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/shadow"
-}
-
-@test "service: ReadWritePaths includes /etc/gshadow (for user creation)" {
-    run grep "ReadWritePaths" "$SERVICE_FILE"
-    assert_output --partial "/etc/gshadow"
+@test "service: documents why ProtectSystem=full is needed" {
+    # The service file should explain the security trade-off
+    run grep -B3 "ProtectSystem" "$SERVICE_FILE"
+    assert_output --regexp "(lock file|useradd|usermod)"
 }
