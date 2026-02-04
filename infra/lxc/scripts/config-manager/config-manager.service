@@ -14,16 +14,17 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=config-manager
 
-# Security hardening
-# Note: Using ProtectSystem=full instead of strict due to user management requirements.
-# useradd/usermod need to create lock files (.lock) in /etc which requires /etc write access.
-# With ProtectSystem=strict, even whitelisting individual files doesn't allow lock file creation.
-# ProtectSystem=full makes /etc writable while protecting /usr and /boot.
-ProtectSystem=full
-ReadWritePaths=/var/log/config-manager /opt/config-manager /var/lib/config-manager /usr/local/lib/config-manager /usr/local/bin
+# Security considerations:
+# This is a system configuration service that needs to:
+# - Create/modify users (useradd/usermod)
+# - Write to /etc (sudoers, systemd units, config files)
+# - Install packages (Docker, etc. which may need to set capabilities)
+# - Modify /usr (install binaries)
+#
+# Applying ProtectSystem or NoNewPrivileges breaks these operations.
+# This service runs once during initial container setup, not continuously.
+# Trade-off: Broad permissions for flexibility vs. security hardening.
 RuntimeDirectory=config-manager
-PrivateTmp=yes
-NoNewPrivileges=yes
 
 # Timeouts
 TimeoutStartSec=300
