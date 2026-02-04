@@ -34,9 +34,9 @@ SERVICE_FILE="${PROJECT_ROOT}/infra/lxc/scripts/config-manager/config-manager.se
 @test "service: uses ProtectSystem=full (not strict due to useradd lock file requirements)" {
     # useradd creates lock files in /etc which requires directory write access
     # ProtectSystem=strict doesn't allow this even with individual file whitelisting
-    run grep "ProtectSystem" "$SERVICE_FILE"
-    assert_output --partial "full"
-    refute_output --partial "strict"
+    # Check only the actual directive line, not comments
+    run grep "^ProtectSystem=" "$SERVICE_FILE"
+    assert_output "ProtectSystem=full"
 }
 
 @test "service: documents why ProtectSystem=full is needed" {
