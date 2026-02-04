@@ -18,9 +18,10 @@ SyslogIdentifier=config-manager
 # Note: ProtectSystem=strict with explicit ReadWritePaths for:
 # - Config-manager data: /var/log, /opt, /etc/config-manager, /var/lib
 # - Helper script installation: /usr/local/lib, /usr/local/bin
-# - System configuration: /etc/sudoers.d (for user setup), /home (for user configs)
+# - User management: /etc/passwd, /etc/group, /etc/shadow, /etc/gshadow, /etc/subuid, /etc/subgid (for useradd/usermod)
+# - System configuration: /etc/sudoers.d (for sudo setup), /home (for user configs), /etc/systemd/system (for service files)
 ProtectSystem=strict
-ReadWritePaths=/var/log/config-manager /opt/config-manager /etc/config-manager /var/lib/config-manager /usr/local/lib/config-manager /usr/local/bin /etc/sudoers.d /home
+ReadWritePaths=/var/log/config-manager /opt/config-manager /etc/config-manager /var/lib/config-manager /usr/local/lib/config-manager /usr/local/bin /etc/passwd /etc/group /etc/shadow /etc/gshadow /etc/subuid /etc/subgid /etc/sudoers.d /home /etc/systemd/system
 RuntimeDirectory=config-manager
 PrivateTmp=yes
 NoNewPrivileges=yes

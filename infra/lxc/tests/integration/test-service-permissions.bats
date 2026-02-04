@@ -51,19 +51,27 @@ setup() {
     refute_output --partial "full"
 }
 
-@test "service: scripts that write to /etc/systemd/system need coverage" {
-    # 02-docker-install.sh, 50-vscode-server.sh create systemd units
-    # Under ProtectSystem=strict, /etc is read-only unless whitelisted
-    local rwpaths
-    rwpaths=$(grep "ReadWritePaths=" "$SERVICE_FILE" | sed 's/ReadWritePaths=//')
+@test "service: ReadWritePaths includes /etc/systemd/system (for service creation)" {
+    run grep "ReadWritePaths" "$SERVICE_FILE"
+    assert_output --partial "/etc/systemd/system"
+}
 
-    # Check if /etc/systemd or broader /etc paths are covered
-    if ! echo "$rwpaths" | grep -qE "(/etc/systemd|/etc )"; then
-        # Flag this as a known issue - systemd unit creation may fail
-        echo "WARNING: /etc/systemd/system not in ReadWritePaths"
-        echo "Scripts 02-docker-install.sh and 50-vscode-server.sh create systemd units"
-        echo "This will fail under ProtectSystem=strict"
-        # Don't fail the test - just flag it as a finding
-        skip "Known issue: /etc/systemd/system not covered (needs investigation)"
-    fi
+@test "service: ReadWritePaths includes /etc/passwd (for user creation)" {
+    run grep "ReadWritePaths" "$SERVICE_FILE"
+    assert_output --partial "/etc/passwd"
+}
+
+@test "service: ReadWritePaths includes /etc/group (for user creation)" {
+    run grep "ReadWritePaths" "$SERVICE_FILE"
+    assert_output --partial "/etc/group"
+}
+
+@test "service: ReadWritePaths includes /etc/shadow (for user creation)" {
+    run grep "ReadWritePaths" "$SERVICE_FILE"
+    assert_output --partial "/etc/shadow"
+}
+
+@test "service: ReadWritePaths includes /etc/gshadow (for user creation)" {
+    run grep "ReadWritePaths" "$SERVICE_FILE"
+    assert_output --partial "/etc/gshadow"
 }
