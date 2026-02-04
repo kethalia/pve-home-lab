@@ -1,0 +1,11 @@
+{
+  "title": "Container Templates",
+  "pages": [
+    "index",
+    "setup",
+    "configuration",
+    "credentials",
+    "migration",
+    "troubleshooting"
+  ]
+}
