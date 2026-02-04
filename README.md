@@ -1,11 +1,11 @@
-# PVE Home Lab
+# Infrahaus
 
 A self-hosted home lab built on [Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview), running Docker-based services across AI/ML, media, gaming, blockchain, and development workloads. Everything is defined as code and documented with a [Fumadocs](https://fumadocs.vercel.app/) site.
 
 ## Monorepo Structure
 
 ```
-pve-home-lab/
+infrahaus/
 ├── apps/
 │   └── web/                 # Documentation site (Next.js + Fumadocs)
 ├── infra/                   # Infrastructure configurations
@@ -33,8 +33,8 @@ pve-home-lab/
 
 ```bash
 # Clone the repository
-git clone https://github.com/kethalia/pve-home-lab.git
-cd pve-home-lab
+git clone https://github.com/kethalia/infrahaus.git
+cd infrahaus
 
 # Install dependencies
 pnpm install

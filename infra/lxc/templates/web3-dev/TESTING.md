@@ -171,11 +171,11 @@ From ProxmoxVE host:
 
 ```bash
 # Deploy using the web3-dev template
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/feat/proxmox-lxc-clean/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/feat/proxmox-lxc-clean/infra/lxc/templates/web3-dev/container.sh)"
 
 # Or with custom resources
 var_cpu=2 var_ram=4096 var_disk=20 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/feat/proxmox-lxc-clean/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/feat/proxmox-lxc-clean/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 2. **Monitor installation:**
@@ -229,17 +229,17 @@ echo $PATH
 
 ```bash
 # Verify credentials file exists
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 
 # Check file permissions
-ls -l /etc/pve-home-lab/credentials
+ls -l /etc/infrahaus/credentials
 # Should show: -rw------- 1 root root
 
 # Verify all required credentials present
-grep -E "CODE_SERVER_PASSWORD|FILEBROWSER_USERNAME|FILEBROWSER_PASSWORD|OPENCODE_PASSWORD" /etc/pve-home-lab/credentials
+grep -E "CODE_SERVER_PASSWORD|FILEBROWSER_USERNAME|FILEBROWSER_PASSWORD|OPENCODE_PASSWORD" /etc/infrahaus/credentials
 
 # Check password format (should be 16 chars, alphanumeric)
-sudo grep CODE_SERVER_PASSWORD /etc/pve-home-lab/credentials | cut -d'=' -f2 | wc -c
+sudo grep CODE_SERVER_PASSWORD /etc/infrahaus/credentials | cut -d'=' -f2 | wc -c
 # Should output: 17 (16 chars + newline)
 ```
 
@@ -253,7 +253,7 @@ echo "FileBrowser: http://${CONTAINER_IP}:8081"
 echo "OpenCode: http://${CONTAINER_IP}:8082"
 
 # Get credentials
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 
 # Test from external machine
 curl -I http://${CONTAINER_IP}:8080
@@ -343,7 +343,7 @@ ls /home/coder/.local/share/code-server/extensions/ | grep -i "juanblanco.solidi
 
 ### Credentials & Security
 
-- [ ] /etc/pve-home-lab/credentials file exists
+- [ ] /etc/infrahaus/credentials file exists
 - [ ] Credentials file has correct permissions (600, root:root)
 - [ ] All required credentials present (CODE*SERVER_PASSWORD, FILEBROWSER*\*, OPENCODE_PASSWORD)
 - [ ] Passwords are 16 characters, alphanumeric

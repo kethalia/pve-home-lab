@@ -332,13 +332,13 @@ generate_password() {
 # Usage: save_credential "KEY" "value"
 #        save_credential "CODE_SERVER_PASSWORD" "aB3dEf7hIjKl"
 #
-# Creates /etc/pve-home-lab/credentials with mode 600 (root-only) and
+# Creates /etc/infrahaus/credentials with mode 600 (root-only) and
 # appends key=value pairs for use by other scripts and welcome messages.
 # ---------------------------------------------------------------------------
 save_credential() {
     local key="$1"
     local value="$2"
-    local creds_file="/etc/pve-home-lab/credentials"
+    local creds_file="/etc/infrahaus/credentials"
     
     # Ensure directory exists
     mkdir -p "$(dirname "$creds_file")"

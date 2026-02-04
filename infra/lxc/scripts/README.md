@@ -70,7 +70,7 @@ Web3 development environment with Docker-in-Docker support.
 **Quick Start:**
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 **Includes:**
@@ -182,11 +182,11 @@ All follow the same structure but with different packages.
 
 ```bash
 # Default configuration
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 
 # Custom resources
 var_cpu=2 var_ram=4096 var_disk=30 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Using Custom Repository
@@ -195,7 +195,7 @@ var_cpu=2 var_ram=4096 var_disk=30 \
 # Point to your fork
 REPO_URL="https://github.com/myuser/my-fork.git" \
 REPO_BRANCH="develop" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Container Management
@@ -228,7 +228,7 @@ journalctl -u config-manager -f
 
 ### Reporting Issues
 
-Report issues at: https://github.com/kethalia/pve-home-lab/issues
+Report issues at: https://github.com/kethalia/infrahaus/issues
 
 ### Contributing Templates
 
@@ -247,4 +247,4 @@ The config-manager system is designed to be generic and reusable. Improvements s
 
 ## License
 
-MIT - See [LICENSE](https://github.com/kethalia/pve-home-lab/blob/main/LICENSE)
+MIT - See [LICENSE](https://github.com/kethalia/infrahaus/blob/main/LICENSE)

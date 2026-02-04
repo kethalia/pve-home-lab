@@ -9,8 +9,8 @@
 
 # Copyright (c) 2026 kethalia  
 # Author: kethalia
-# License: MIT | https://github.com/kethalia/pve-home-lab/raw/main/LICENSE
-# Source: https://github.com/kethalia/pve-home-lab
+# License: MIT | https://github.com/kethalia/infrahaus/raw/main/LICENSE
+# Source: https://github.com/kethalia/infrahaus
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
 color
@@ -21,7 +21,7 @@ network_check
 update_os
 
 # Configuration (must be provided via environment variables by container.sh)
-REPO_URL="${REPO_URL:-https://github.com/kethalia/pve-home-lab.git}"
+REPO_URL="${REPO_URL:-https://github.com/kethalia/infrahaus.git}"
 REPO_BRANCH="${REPO_BRANCH:-main}"
 
 # Use the same branch for config-manager as the installation script
@@ -79,7 +79,7 @@ msg_ok "Configuration file created"
 # Download config-sync.sh
 msg_info "Downloading config-sync script"
 if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
-    "https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-sync.sh" \
+    "https://raw.githubusercontent.com/kethalia/infrahaus/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-sync.sh" \
     -o /usr/local/bin/config-sync.sh; then
   msg_error "Failed to download config-sync.sh"
   exit 1
@@ -102,7 +102,7 @@ msg_ok "Config-sync script installed"
 # Download systemd service file
 msg_info "Downloading systemd service file"
 if ! curl -fsSL --max-time 60 -A "ProxmoxVE-Script/1.0" \
-    "https://raw.githubusercontent.com/kethalia/pve-home-lab/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-manager.service" \
+    "https://raw.githubusercontent.com/kethalia/infrahaus/${REPO_BRANCH}/infra/lxc/scripts/config-manager/config-manager.service" \
     -o /etc/systemd/system/config-manager.service; then
   msg_error "Failed to download config-manager.service"
   exit 1
@@ -220,7 +220,7 @@ echo -e "${INFO}${YW}Follow config-manager logs from host:${CL}"
 echo -e "${TAB}${BGN}pct exec ${CTID} -- journalctl -u config-manager -f --no-pager -o cat${CL}"
 echo -e ""
 echo -e "${INFO}${YW}View web app credentials (generated passwords):${CL}"
-echo -e "${TAB}${BGN}pct exec ${CTID} -- cat /etc/pve-home-lab/credentials${CL}"
+echo -e "${TAB}${BGN}pct exec ${CTID} -- cat /etc/infrahaus/credentials${CL}"
 echo -e ""
 echo -e "${INFO}${YW}Config Management (from inside container):${CL}"
 echo -e "${TAB}• Manual sync: ${BGN}sudo systemctl restart config-manager${CL}"

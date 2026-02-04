@@ -27,7 +27,7 @@ ProxmoxVE Host
 │   │   ├── Script Execution (00-pre-checks.sh → 99-post-setup.sh)
 │   │   ├── File Management (bashrc, aliases, gitconfig)
 │   │   ├── Package Installation (apt, npm, pip, custom)
-│   │   ├── Credential Generation (/etc/pve-home-lab/credentials)
+│   │   ├── Credential Generation (/etc/infrahaus/credentials)
 │   │   └── Snapshot System (ZFS/LVM/BTRFS/file-level)
 │   ├── Installed Tools (Docker, Node.js, etc.)
 │   ├── User Environment (coder:1000)
@@ -54,7 +54,7 @@ ProxmoxVE Host
 
 ```bash
 # From ProxmoxVE host:
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Custom Resources
@@ -62,7 +62,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/ma
 ```bash
 # 2 CPU, 4GB RAM, 30GB disk
 var_cpu=2 var_ram=4096 var_disk=30 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Custom Repository
@@ -71,7 +71,7 @@ var_cpu=2 var_ram=4096 var_disk=30 \
 # Use your own config fork
 REPO_URL="https://github.com/yourusername/your-configs.git" \
 REPO_BRANCH="main" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ## Available Templates
@@ -154,7 +154,7 @@ foundry|command -v forge|curl -L https://foundry.paradigm.xyz | bash && foundryu
 All web services (VS Code Server, FileBrowser, OpenCode) use randomly generated passwords:
 
 - **16-character alphanumeric passwords** generated on first boot
-- **Stored securely** in `/etc/pve-home-lab/credentials` (mode 600, root-only)
+- **Stored securely** in `/etc/infrahaus/credentials` (mode 600, root-only)
 - **Unique per container** - no hardcoded defaults
 - **Easy retrieval** from ProxmoxVE host or inside container
 
@@ -162,10 +162,10 @@ All web services (VS Code Server, FileBrowser, OpenCode) use randomly generated 
 
 ```bash
 # From ProxmoxVE host
-pct exec <container-id> -- cat /etc/pve-home-lab/credentials
+pct exec <container-id> -- cat /etc/infrahaus/credentials
 
 # Inside container
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 ```
 
 ### Unprivileged Containers
@@ -324,8 +324,8 @@ See [Troubleshooting](/docs/container-templates/troubleshooting) for detailed so
 
 ### Report Issues
 
-- **GitHub Issues**: https://github.com/kethalia/pve-home-lab/issues
-- **Discussions**: https://github.com/kethalia/pve-home-lab/discussions
+- **GitHub Issues**: https://github.com/kethalia/infrahaus/issues
+- **Discussions**: https://github.com/kethalia/infrahaus/discussions
 
 ### Improve Documentation
 

@@ -64,7 +64,7 @@ ls -la /run/config-manager/config-manager.lock
 
 ```bash
 sudo tee /etc/config-manager/config.env <<EOF
-CONFIG_REPO_URL="https://github.com/kethalia/pve-home-lab.git"
+CONFIG_REPO_URL="https://github.com/kethalia/infrahaus.git"
 CONFIG_BRANCH="main"
 CONFIG_PATH="infra/lxc/templates/web3-dev/container-configs"
 SNAPSHOT_ENABLED="auto"
@@ -476,7 +476,7 @@ journalctl -u config-manager -n 200 | grep -E 'took|Installing'
 
 ### Credentials File Missing
 
-**Symptom**: `/etc/pve-home-lab/credentials` doesn't exist
+**Symptom**: `/etc/infrahaus/credentials` doesn't exist
 
 **Cause**: Config-manager hasn't completed first boot setup
 
@@ -504,7 +504,7 @@ sudo systemctl restart config-manager
 
 ```bash
 # Verify credentials file exists and is readable
-sudo cat /etc/pve-home-lab/credentials
+sudo cat /etc/infrahaus/credentials
 
 # Check service is running
 systemctl status code-server@coder
@@ -522,7 +522,7 @@ sudo cat /etc/systemd/system/code-server@.service | grep PASSWORD
 sudo systemctl restart code-server@coder
 
 # If still not working, regenerate credentials
-sudo rm /etc/pve-home-lab/credentials
+sudo rm /etc/infrahaus/credentials
 sudo systemctl restart config-manager
 ```
 
@@ -709,11 +709,11 @@ When reporting issues, include:
 
 ### Where to Ask
 
-- **GitHub Issues**: https://github.com/kethalia/pve-home-lab/issues
-- **Discussions**: https://github.com/kethalia/pve-home-lab/discussions
+- **GitHub Issues**: https://github.com/kethalia/infrahaus/issues
+- **Discussions**: https://github.com/kethalia/infrahaus/discussions
 
 ## Full Documentation
 
 For the complete troubleshooting guide with detailed examples and solutions, see:
 
-**[infra/lxc/docs/TROUBLESHOOTING.md](https://github.com/kethalia/pve-home-lab/blob/main/infra/lxc/docs/TROUBLESHOOTING.md)**
+**[infra/lxc/docs/TROUBLESHOOTING.md](https://github.com/kethalia/infrahaus/blob/main/infra/lxc/docs/TROUBLESHOOTING.md)**

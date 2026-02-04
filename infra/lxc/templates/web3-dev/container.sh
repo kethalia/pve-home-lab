@@ -7,8 +7,8 @@
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/2026-02-02/misc/build.func)
 # Copyright (c) 2026 kethalia
 # Author: kethalia
-# License: MIT | https://github.com/kethalia/pve-home-lab/raw/main/LICENSE
-# Source: https://github.com/kethalia/pve-home-lab
+# License: MIT | https://github.com/kethalia/infrahaus/raw/main/LICENSE
+# Source: https://github.com/kethalia/infrahaus
 
 # Detect which branch this script is running from
 # This allows testing on feature branches by setting SCRIPT_BRANCH env var
@@ -21,7 +21,7 @@ if [[ -f "$(dirname "${BASH_SOURCE[0]:-$0}")/template.conf" ]]; then
   source "$(dirname "${BASH_SOURCE[0]:-$0}")/template.conf"
 else
   # Remote execution via curl
-  source <(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/${SCRIPT_BRANCH}/infra/lxc/templates/web3-dev/template.conf)
+  source <(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/${SCRIPT_BRANCH}/infra/lxc/templates/web3-dev/template.conf)
 fi
 
 # Template metadata
@@ -95,7 +95,7 @@ build_container
 msg_info "Running Web3 Dev Container configuration"
 
 # Configuration (must be provided via environment variables)
-REPO_URL="${REPO_URL:-https://github.com/kethalia/pve-home-lab.git}"
+REPO_URL="${REPO_URL:-https://github.com/kethalia/infrahaus.git}"
 REPO_BRANCH="${REPO_BRANCH:-${SCRIPT_BRANCH}}"  # Use same branch as container.sh
 
 # The install script needs FUNCTIONS_FILE_PATH (ProxmoxVE framework functions)
@@ -112,7 +112,7 @@ set -euo pipefail
 export FUNCTIONS_FILE_PATH="$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)"
 
 # Download the install script to a file
-curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/BRANCH_PLACEHOLDER/infra/lxc/scripts/install-lxc-template.sh > /tmp/install-lxc-template.sh
+curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/BRANCH_PLACEHOLDER/infra/lxc/scripts/install-lxc-template.sh > /tmp/install-lxc-template.sh
 chmod +x /tmp/install-lxc-template.sh
 
 # Execute it

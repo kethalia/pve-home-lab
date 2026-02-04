@@ -196,7 +196,7 @@ This file controls all aspects of config-manager behavior. It's created during i
 
 ```bash
 # /etc/config-manager/config.env
-CONFIG_REPO_URL="https://github.com/kethalia/pve-home-lab.git"
+CONFIG_REPO_URL="https://github.com/kethalia/infrahaus.git"
 CONFIG_BRANCH="main"
 CONFIG_PATH="infra/lxc/templates/web3-dev/container-configs"
 CONFIG_HELPER_PATH="infra/lxc/scripts/config-manager"
@@ -218,10 +218,10 @@ LVM_SNAPSHOT_SIZE="1G"
 
 ```bash
 # HTTPS (recommended for public repos)
-CONFIG_REPO_URL="https://github.com/kethalia/pve-home-lab.git"
+CONFIG_REPO_URL="https://github.com/kethalia/infrahaus.git"
 
 # SSH (for private repos with key authentication)
-CONFIG_REPO_URL="git@github.com:kethalia/pve-home-lab.git"
+CONFIG_REPO_URL="git@github.com:kethalia/infrahaus.git"
 
 # Self-hosted GitLab
 CONFIG_REPO_URL="https://gitlab.example.com/infra/configs.git"

@@ -47,7 +47,7 @@ From your ProxmoxVE host shell (SSH into Proxmox):
 
 ```bash
 # Deploy web3-dev template with defaults
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 **What happens:**
@@ -68,16 +68,16 @@ Override defaults using environment variables:
 ```bash
 # Custom resources: 2 CPU, 4GB RAM, 30GB disk
 var_cpu=2 var_ram=4096 var_disk=30 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 
 # Custom git repository and branch
 REPO_URL="https://github.com/yourusername/your-fork.git" \
 REPO_BRANCH="develop" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 
 # Unprivileged container (no Docker-in-Docker)
 var_unprivileged=1 \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 ### Available Templates
@@ -145,7 +145,7 @@ This is the fastest method and requires no manual steps:
 ssh root@proxmox-host
 
 # Run the template's container.sh script
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 **Environment Variables**:
@@ -174,8 +174,8 @@ For more control or when troubleshooting:
 
 ```bash
 # Clone the repository
-git clone https://github.com/kethalia/pve-home-lab.git
-cd pve-home-lab/infra/lxc/templates/web3-dev
+git clone https://github.com/kethalia/infrahaus.git
+cd infrahaus/infra/lxc/templates/web3-dev
 ```
 
 #### Step 2: Review and Customize template.conf
@@ -433,7 +433,7 @@ To use a fork or custom repository:
 # Deploy with custom repo
 REPO_URL="https://github.com/yourusername/your-configs.git" \
 REPO_BRANCH="main" \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh)"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh)"
 ```
 
 **Repository structure required**:
@@ -462,7 +462,7 @@ Each template has its own `container-configs/` directory. To customize:
 # Fork the repository on GitHub
 # Clone your fork
 git clone https://github.com/yourusername/pve-home-lab.git
-cd pve-home-lab/infra/lxc/templates/web3-dev/container-configs
+cd infrahaus/infra/lxc/templates/web3-dev/container-configs
 
 # Add your packages
 echo "vim" >> packages/base.apt
@@ -568,7 +568,7 @@ EOF
 cp infra/lxc/templates/web3-dev/container.sh infra/lxc/templates/my-template/
 
 # Or download the shared pattern
-curl -fsSL https://raw.githubusercontent.com/kethalia/pve-home-lab/main/infra/lxc/templates/web3-dev/container.sh \
+curl -fsSL https://raw.githubusercontent.com/kethalia/infrahaus/main/infra/lxc/templates/web3-dev/container.sh \
   -o infra/lxc/templates/my-template/container.sh
 ```
 
@@ -705,5 +705,5 @@ pct exec <container-id> -- config-rollback status
 ### Getting Help
 
 - **Documentation**: See [CONFIGURATION.md](CONFIGURATION.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- **GitHub Issues**: https://github.com/kethalia/pve-home-lab/issues
-- **Discussions**: https://github.com/kethalia/pve-home-lab/discussions
+- **GitHub Issues**: https://github.com/kethalia/infrahaus/issues
+- **Discussions**: https://github.com/kethalia/infrahaus/discussions

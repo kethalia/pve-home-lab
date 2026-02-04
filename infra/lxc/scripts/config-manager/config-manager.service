@@ -1,6 +1,6 @@
 [Unit]
 Description=LXC Configuration Manager - Git-based config sync
-Documentation=https://github.com/kethalia/pve-home-lab
+Documentation=https://github.com/kethalia/infrahaus
 After=network-online.target
 Wants=network-online.target
 

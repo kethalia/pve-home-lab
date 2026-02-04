@@ -6,7 +6,7 @@
 # - Custom settings (OLED theme, Fira Code, etc.)
 # - Random secure password
 #
-# Service exposed on port 8080 with password stored in /etc/pve-home-lab/credentials
+# Service exposed on port 8080 with password stored in /etc/infrahaus/credentials
 
 set -eo pipefail
 

@@ -165,7 +165,7 @@ ping -c 3 github.com
 ```bash
 # If config file is missing, recreate it
 sudo tee /etc/config-manager/config.env <<EOF
-CONFIG_REPO_URL="https://github.com/kethalia/pve-home-lab.git"
+CONFIG_REPO_URL="https://github.com/kethalia/infrahaus.git"
 CONFIG_BRANCH="main"
 CONFIG_PATH="infra/lxc/templates/web3-dev/container-configs"
 SNAPSHOT_ENABLED="auto"
@@ -247,7 +247,7 @@ sudo systemctl restart config-manager
 ```bash
 # Recreate config file
 sudo tee /etc/config-manager/config.env <<EOF
-CONFIG_REPO_URL="https://github.com/kethalia/pve-home-lab.git"
+CONFIG_REPO_URL="https://github.com/kethalia/infrahaus.git"
 CONFIG_BRANCH="main"
 CONFIG_PATH="infra/lxc/templates/web3-dev/container-configs"
 SNAPSHOT_ENABLED="auto"
@@ -1531,8 +1531,8 @@ When reporting issues, include:
 
 ### Where to Ask
 
-- **GitHub Issues**: https://github.com/kethalia/pve-home-lab/issues
-- **GitHub Discussions**: https://github.com/kethalia/pve-home-lab/discussions
+- **GitHub Issues**: https://github.com/kethalia/infrahaus/issues
+- **GitHub Discussions**: https://github.com/kethalia/infrahaus/discussions
 
 ### Contributing Fixes
 
