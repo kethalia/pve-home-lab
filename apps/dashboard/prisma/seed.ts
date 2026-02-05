@@ -1,14 +1,47 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, PackageManager } from "@/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { readFileSync, readdirSync, existsSync } from "fs";
-import { join, resolve } from "path";
+import { join, resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
+// ESM-compatible __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const TEMPLATE_PATH = resolve(
   __dirname,
   "../../../infra/lxc/templates/web3-dev",
 );
 const CONFIGS_PATH = join(TEMPLATE_PATH, "container-configs");
+
+// Verify required paths exist
+function checkPaths(): void {
+  const pathsToCheck = [
+    { path: TEMPLATE_PATH, name: "Template directory" },
+    {
+      path: join(TEMPLATE_PATH, "template.conf"),
+      name: "Template config file",
+    },
+    { path: CONFIGS_PATH, name: "Container configs directory" },
+    { path: join(CONFIGS_PATH, "scripts"), name: "Scripts directory" },
+    { path: join(CONFIGS_PATH, "files"), name: "Files directory" },
+    { path: join(CONFIGS_PATH, "packages"), name: "Packages directory" },
+  ];
+
+  for (const { path, name } of pathsToCheck) {
+    if (!existsSync(path)) {
+      throw new Error(
+        `${name} not found at: ${path}\n` +
+          "Make sure you're running the seed script from the correct directory and the template structure exists.",
+      );
+    }
+  }
+}
 
 interface TemplateConfig {
   name: string;
@@ -43,8 +76,10 @@ function parseTemplateConfig(): TemplateConfig {
 
   const getBoolean = (key: string, defaultValue: boolean): boolean => {
     const value = getValue(key);
-    return value === "1" || value === "true";
+    return value ? value === "1" || value === "true" : defaultValue;
   };
+
+  const memory = getNumber("TEMPLATE_RAM", 8192);
 
   return {
     name: getValue("TEMPLATE_APP", "Web3 Dev Container"),
@@ -54,8 +89,8 @@ function parseTemplateConfig(): TemplateConfig {
     ),
     tags: getValue("TEMPLATE_TAGS", "").split(";").filter(Boolean),
     cores: getNumber("TEMPLATE_CPU", 4),
-    memory: getNumber("TEMPLATE_RAM", 8192),
-    swap: getNumber("TEMPLATE_RAM", 8192), // Use same as RAM as default
+    memory,
+    swap: getNumber("TEMPLATE_SWAP", memory), // Default to same as memory if not specified
     diskSize: getNumber("TEMPLATE_DISK", 20),
     osTemplate: getValue("TEMPLATE_OS", "debian"),
     osVersion: getValue("TEMPLATE_VERSION", "12"),
@@ -75,8 +110,8 @@ function parseScripts() {
   return files.map((filename) => {
     const content = readFileSync(join(scriptsPath, filename), "utf-8");
 
-    // Extract description from comment header
-    const descMatch = content.match(/^#\s*(.+)$/m);
+    // Extract description from comment header (skip shebang lines starting with #!)
+    const descMatch = content.match(/^#(?!!)\s*(.+)$/m);
     const description = descMatch ? descMatch[1].trim() : undefined;
 
     // Extract order from filename prefix (e.g., "00-" -> 0)
@@ -149,7 +184,7 @@ function parsePackages() {
     {
       name: string;
       description: string;
-      packages: { name: string; manager: string }[];
+      packages: { name: string; manager: PackageManager }[];
     }
   > = {};
 
@@ -158,7 +193,7 @@ function parsePackages() {
     const [bucketName, ext] = filename.split(".");
 
     // Determine package manager from extension
-    let manager: "apt" | "npm" | "pip" = "apt";
+    let manager: PackageManager = "apt";
     if (ext === "npm") manager = "npm";
     else if (ext === "pip") manager = "pip";
 
@@ -185,6 +220,9 @@ function parsePackages() {
 
 async function main() {
   console.log("🌱 Seeding database...");
+
+  // Check that all required paths exist
+  checkPaths();
 
   // Parse template configuration
   console.log("\n📄 Parsing template configuration...");
@@ -215,68 +253,70 @@ async function main() {
   // Create template with all related data in a transaction
   console.log("\n💾 Creating database records...");
 
-  const template = await prisma.template.create({
-    data: {
-      name: config.name,
-      description: config.description,
-      source: "filesystem",
-      path: TEMPLATE_PATH,
-      osTemplate: `${config.osTemplate}-${config.osVersion}-standard`,
-      cores: config.cores,
-      memory: config.memory,
-      swap: config.swap,
-      diskSize: config.diskSize,
-      storage: "local-lvm",
-      bridge: "vmbr0",
-      unprivileged: config.unprivileged,
-      nesting: config.nesting,
-      keyctl: config.keyctl,
-      fuse: config.fuse,
-      tags: config.tags.join(","),
-
-      // Create related scripts
-      scripts: {
-        create: scripts,
-      },
-
-      // Create related files
-      files: {
-        create: files,
-      },
-    },
-    include: {
-      scripts: true,
-      files: true,
-    },
-  });
-
-  console.log(`  ✓ Created template: ${template.name} (${template.id})`);
-  console.log(`    - ${template.scripts.length} scripts`);
-  console.log(`    - ${template.files.length} files`);
-
-  // Create package buckets and packages
-  for (const bucket of packageBuckets) {
-    const createdBucket = await prisma.packageBucket.create({
+  await prisma.$transaction(async (tx) => {
+    const template = await tx.template.create({
       data: {
-        name: `${config.name} - ${bucket.name}`,
-        description: bucket.description,
-        packages: {
-          create: bucket.packages.map((pkg) => ({
-            name: pkg.name,
-            manager: pkg.manager,
-            templateId: template.id,
-          })),
+        name: config.name,
+        description: config.description,
+        source: "filesystem",
+        path: TEMPLATE_PATH,
+        osTemplate: `${config.osTemplate}-${config.osVersion}-standard`,
+        cores: config.cores,
+        memory: config.memory,
+        swap: config.swap,
+        diskSize: config.diskSize,
+        storage: "local-lvm",
+        bridge: "vmbr0",
+        unprivileged: config.unprivileged,
+        nesting: config.nesting,
+        keyctl: config.keyctl,
+        fuse: config.fuse,
+        tags: config.tags.join(","),
+
+        // Create related scripts
+        scripts: {
+          create: scripts,
+        },
+
+        // Create related files
+        files: {
+          create: files,
         },
       },
       include: {
-        packages: true,
+        scripts: true,
+        files: true,
       },
     });
 
-    console.log(
-      `  ✓ Created package bucket: ${createdBucket.name} (${createdBucket.packages.length} packages)`,
-    );
-  }
+    console.log(`  ✓ Created template: ${template.name} (${template.id})`);
+    console.log(`    - ${template.scripts.length} scripts`);
+    console.log(`    - ${template.files.length} files`);
+
+    // Create package buckets and packages
+    for (const bucket of packageBuckets) {
+      const createdBucket = await tx.packageBucket.create({
+        data: {
+          name: `${config.name} - ${bucket.name}`,
+          description: bucket.description,
+          packages: {
+            create: bucket.packages.map((pkg) => ({
+              name: pkg.name,
+              manager: pkg.manager,
+              templateId: template.id,
+            })),
+          },
+        },
+        include: {
+          packages: true,
+        },
+      });
+
+      console.log(
+        `  ✓ Created package bucket: ${createdBucket.name} (${createdBucket.packages.length} packages)`,
+      );
+    }
+  });
 
   console.log("\n✅ Seed completed successfully!");
 }

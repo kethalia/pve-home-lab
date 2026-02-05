@@ -79,6 +79,13 @@ export function decrypt(encryptedData: string): string {
   const iv = Buffer.from(ivHex, "hex");
   const authTag = Buffer.from(authTagHex, "hex");
 
+  // Validate auth tag length
+  if (authTag.length !== AUTH_TAG_LENGTH) {
+    throw new Error(
+      `Invalid auth tag length. Expected ${AUTH_TAG_LENGTH} bytes, got ${authTag.length} bytes.`,
+    );
+  }
+
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
 

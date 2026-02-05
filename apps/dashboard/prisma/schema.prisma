@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma/client"
 }
 
 datasource db {
@@ -172,7 +173,6 @@ model Container {
   services ContainerService[]
   events   ContainerEvent[]
 
-  @@index([vmid])
   @@index([status])
   @@index([nodeId])
   @@index([templateId])
