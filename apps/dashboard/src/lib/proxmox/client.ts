@@ -10,7 +10,6 @@ import type {
   ProxmoxApiResponse,
   ProxmoxClientConfig,
   ProxmoxCredentials,
-  ProxmoxTicketCredentials,
 } from "./types.js";
 
 export class ProxmoxClient {

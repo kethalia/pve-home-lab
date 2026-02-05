@@ -7,7 +7,6 @@ import { ProxmoxClient } from "./client.js";
 import { TicketResponseSchema } from "./schemas.js";
 import type {
   ProxmoxTicketCredentials,
-  ProxmoxTicketRequest,
   ProxmoxTicketResponse,
 } from "./types.js";
 
