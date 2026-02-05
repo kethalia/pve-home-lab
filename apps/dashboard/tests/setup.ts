@@ -1,14 +1,33 @@
 /// <reference types="node" />
 import { beforeAll, afterAll, beforeEach } from "vitest";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 // Use a dedicated test database to avoid destroying development data
-const testDatabaseUrl =
-  process.env.TEST_DATABASE_URL ||
-  process.env.DATABASE_URL?.replace("/dashboard", "/dashboard_test") ||
-  "postgresql://dashboard:dashboard@localhost:5432/dashboard_test";
+function getTestDatabaseUrl(): string {
+  if (process.env.TEST_DATABASE_URL) {
+    return process.env.TEST_DATABASE_URL;
+  }
+
+  if (process.env.DATABASE_URL) {
+    try {
+      // Parse and safely append _test suffix to database name
+      const url = new URL(process.env.DATABASE_URL);
+      const dbName = url.pathname.slice(1); // Remove leading /
+      url.pathname = `/${dbName}_test`;
+      return url.toString();
+    } catch (error) {
+      console.error("Invalid DATABASE_URL format:", error);
+      // Fall through to default
+    }
+  }
+
+  // Default test database URL
+  return "postgresql://dashboard:dashboard@localhost:5432/dashboard_test";
+}
+
+const testDatabaseUrl = getTestDatabaseUrl();
 
 const pool = new Pool({ connectionString: testDatabaseUrl });
 const adapter = new PrismaPg(pool);

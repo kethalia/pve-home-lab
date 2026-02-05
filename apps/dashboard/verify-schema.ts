@@ -115,7 +115,7 @@ const CHECKS = {
 
     // Check for indexes
     const indexChecks = [
-      "Container_vmid_idx",
+      // Removed: "Container_vmid_idx" (redundant with unique constraint)
       "Container_status_idx",
       "ContainerEvent_containerId_createdAt_idx",
     ];

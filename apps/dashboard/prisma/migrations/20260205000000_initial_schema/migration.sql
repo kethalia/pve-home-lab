@@ -180,9 +180,6 @@ CREATE INDEX "TemplateFile_templateId_idx" ON "TemplateFile"("templateId");
 CREATE UNIQUE INDEX "Container_vmid_key" ON "Container"("vmid");
 
 -- CreateIndex
-CREATE INDEX "Container_vmid_idx" ON "Container"("vmid");
-
--- CreateIndex
 CREATE INDEX "Container_status_idx" ON "Container"("status");
 
 -- CreateIndex
