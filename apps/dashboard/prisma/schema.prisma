@@ -1,13 +1,205 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ==================== Enums ====================
+
+enum PackageManager {
+  apt
+  npm
+  pip
+  custom
+}
+
+enum TemplateSource {
+  filesystem
+  custom
+}
+
+enum FilePolicy {
+  replace
+  default
+  backup
+}
+
+enum ContainerStatus {
+  creating
+  running
+  stopped
+  error
+}
+
+enum ServiceType {
+  systemd
+  docker
+  process
+}
+
+enum ServiceStatus {
+  installing
+  running
+  stopped
+  error
+}
+
+enum EventType {
+  created
+  started
+  stopped
+  error
+  service_ready
+  script_completed
+}
+
+// ==================== Models ====================
+
+model ProxmoxNode {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  host        String
+  port        Int      @default(8006)
+  tokenId     String
+  tokenSecret String // Encrypted via encryption utility
+  fingerprint String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  containers Container[]
+}
+
+model Template {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  description  String?
+  source       TemplateSource @default(filesystem)
+  path         String? // Filesystem path for filesystem templates
+  osTemplate   String? // e.g., "debian-12-standard"
+  cores        Int?
+  memory       Int? // MB
+  swap         Int? // MB
+  diskSize     Int? // GB
+  storage      String? // e.g., "local-lvm"
+  bridge       String? // e.g., "vmbr0"
+  unprivileged Boolean        @default(true)
+  nesting      Boolean        @default(false)
+  keyctl       Boolean        @default(false)
+  fuse         Boolean        @default(false)
+  tags         String? // Comma-separated or JSON array
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  scripts    TemplateScript[]
+  files      TemplateFile[]
+  packages   Package[]
+  containers Container[]
+}
+
+model PackageBucket {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  packages Package[]
+}
+
+model Package {
+  id       String         @id @default(cuid())
+  name     String
+  manager  PackageManager
+  version  String?
+  bucketId String?
+  bucket   PackageBucket? @relation(fields: [bucketId], references: [id], onDelete: Cascade)
+
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([bucketId])
+  @@index([templateId])
+}
+
+model TemplateScript {
+  id          String   @id @default(cuid())
+  name        String
+  order       Int // Execution order
+  content     String   @db.Text
+  description String?
+  enabled     Boolean  @default(true)
+  templateId  String
+  template    Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model TemplateFile {
+  id         String     @id @default(cuid())
+  name       String
+  targetPath String // Path where file will be deployed
+  policy     FilePolicy @default(replace)
+  content    String     @db.Text
+  templateId String
+  template   Template   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model Container {
+  id           String          @id @default(cuid())
+  vmid         Int             @unique // Proxmox VM ID
+  hostname     String
+  status       ContainerStatus @default(creating)
+  ip           String?
+  cores        Int
+  memory       Int // MB
+  swap         Int // MB
+  diskSize     Int // GB
+  rootPassword String // Encrypted via encryption utility
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  nodeId     String
+  node       ProxmoxNode @relation(fields: [nodeId], references: [id])
+  templateId String?
+  template   Template?   @relation(fields: [templateId], references: [id])
+
+  services ContainerService[]
+  events   ContainerEvent[]
+
+  @@index([vmid])
+  @@index([status])
+  @@index([nodeId])
+  @@index([templateId])
+}
+
+model ContainerService {
+  id          String        @id @default(cuid())
+  name        String
+  type        ServiceType
+  port        Int?
+  webUrl      String?
+  status      ServiceStatus @default(installing)
+  credentials String? // JSON blob
+  containerId String
+  container   Container     @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  @@index([containerId])
+}
+
+model ContainerEvent {
+  id          String    @id @default(cuid())
+  type        EventType
+  message     String
+  metadata    String? // JSON blob
+  createdAt   DateTime  @default(now())
+  containerId String
+  container   Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
+
+  @@index([containerId, createdAt])
 }
