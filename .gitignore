@@ -2,6 +2,10 @@
 node_modules/
 .pnpm-store/
 
+# lock files (pnpm workspace - only pnpm-lock.yaml should exist)
+package-lock.json
+yarn.lock
+
 # next.js
 .next/
 out/
