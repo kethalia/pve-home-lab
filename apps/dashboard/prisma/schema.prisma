@@ -30,10 +30,9 @@ enum FilePolicy {
   backup
 }
 
-enum ContainerStatus {
+enum ContainerLifecycle {
   creating
-  running
-  stopped
+  ready
   error
 }
 
@@ -152,18 +151,12 @@ model TemplateFile {
 }
 
 model Container {
-  id           String          @id @default(cuid())
-  vmid         Int             @unique // Proxmox VM ID
-  hostname     String
-  status       ContainerStatus @default(creating)
-  ip           String?
-  cores        Int
-  memory       Int // MB
-  swap         Int // MB
-  diskSize     Int // GB
-  rootPassword String // Encrypted via encryption utility
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id           String             @id @default(cuid())
+  vmid         Int                @unique // Proxmox VM ID
+  lifecycle    ContainerLifecycle @default(creating)
+  rootPassword String             // Encrypted via encryption utility
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   nodeId     String
   node       ProxmoxNode @relation(fields: [nodeId], references: [id])
@@ -173,7 +166,7 @@ model Container {
   services ContainerService[]
   events   ContainerEvent[]
 
-  @@index([status])
+  @@index([lifecycle])
   @@index([nodeId])
   @@index([templateId])
 }

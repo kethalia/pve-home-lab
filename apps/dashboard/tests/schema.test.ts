@@ -17,22 +17,12 @@ describe("Database Schema Relations", () => {
             create: [
               {
                 vmid: 100,
-                hostname: "test-container-1",
-                status: "running",
-                cores: 2,
-                memory: 4096,
-                swap: 4096,
-                diskSize: 10,
+                lifecycle: "ready",
                 rootPassword: encrypt("password123"),
               },
               {
                 vmid: 101,
-                hostname: "test-container-2",
-                status: "stopped",
-                cores: 4,
-                memory: 8192,
-                swap: 8192,
-                diskSize: 20,
+                lifecycle: "ready",
                 rootPassword: encrypt("password456"),
               },
             ],
@@ -249,12 +239,7 @@ describe("Database Schema Relations", () => {
       const container = await prisma.container.create({
         data: {
           vmid: 200,
-          hostname: "web-server",
-          status: "running",
-          cores: 2,
-          memory: 2048,
-          swap: 2048,
-          diskSize: 10,
+          lifecycle: "ready",
           rootPassword: encrypt("root123"),
           nodeId: node.id,
           services: {
@@ -321,12 +306,7 @@ describe("Database Schema Relations", () => {
       const container = await prisma.container.create({
         data: {
           vmid: 300,
-          hostname: "temp-container",
-          status: "creating",
-          cores: 1,
-          memory: 1024,
-          swap: 1024,
-          diskSize: 5,
+          lifecycle: "creating",
           rootPassword: encrypt("pass"),
           nodeId: node.id,
           services: {
@@ -390,12 +370,7 @@ describe("Database Schema Relations", () => {
       await prisma.container.createMany({
         data: Array.from({ length: 10 }, (_, i) => ({
           vmid: 1000 + i,
-          hostname: `container-${i}`,
-          status: i % 2 === 0 ? "running" : "stopped",
-          cores: 2,
-          memory: 2048,
-          swap: 2048,
-          diskSize: 10,
+          lifecycle: "ready",
           rootPassword: encrypt("pass"),
           nodeId: node.id,
         })),
@@ -407,13 +382,13 @@ describe("Database Schema Relations", () => {
       });
 
       expect(container).toBeTruthy();
-      expect(container?.hostname).toBe("container-5");
+      expect(container?.vmid).toBe(1005);
     });
 
-    it("should efficiently query by status (indexed)", async () => {
+    it("should efficiently query by lifecycle (indexed)", async () => {
       const node = await prisma.proxmoxNode.create({
         data: {
-          name: "status-test-node",
+          name: "lifecycle-test-node",
           host: "192.168.1.40",
           tokenId: "token",
           tokenSecret: encrypt("secret"),
@@ -424,46 +399,31 @@ describe("Database Schema Relations", () => {
         data: [
           {
             vmid: 2000,
-            hostname: "running-1",
-            status: "running",
-            cores: 2,
-            memory: 2048,
-            swap: 2048,
-            diskSize: 10,
+            lifecycle: "ready",
             rootPassword: encrypt("pass"),
             nodeId: node.id,
           },
           {
             vmid: 2001,
-            hostname: "running-2",
-            status: "running",
-            cores: 2,
-            memory: 2048,
-            swap: 2048,
-            diskSize: 10,
+            lifecycle: "ready",
             rootPassword: encrypt("pass"),
             nodeId: node.id,
           },
           {
             vmid: 2002,
-            hostname: "stopped-1",
-            status: "stopped",
-            cores: 2,
-            memory: 2048,
-            swap: 2048,
-            diskSize: 10,
+            lifecycle: "creating",
             rootPassword: encrypt("pass"),
             nodeId: node.id,
           },
         ],
       });
 
-      // Query by status (should use index)
-      const runningContainers = await prisma.container.findMany({
-        where: { status: "running" },
+      // Query by lifecycle (should use index)
+      const readyContainers = await prisma.container.findMany({
+        where: { lifecycle: "ready" },
       });
 
-      expect(runningContainers).toHaveLength(2);
+      expect(readyContainers).toHaveLength(2);
     });
 
     it("should efficiently query container events by containerId and createdAt (compound index)", async () => {
@@ -479,12 +439,7 @@ describe("Database Schema Relations", () => {
       const container = await prisma.container.create({
         data: {
           vmid: 3000,
-          hostname: "event-container",
-          status: "running",
-          cores: 2,
-          memory: 2048,
-          swap: 2048,
-          diskSize: 10,
+          lifecycle: "ready",
           rootPassword: encrypt("pass"),
           nodeId: node.id,
         },
@@ -580,12 +535,7 @@ describe("Database Schema Relations", () => {
       await prisma.container.create({
         data: {
           vmid: 4000,
-          hostname: "container-1",
-          status: "running",
-          cores: 2,
-          memory: 2048,
-          swap: 2048,
-          diskSize: 10,
+          lifecycle: "ready",
           rootPassword: encrypt("pass"),
           nodeId: node.id,
         },
@@ -595,12 +545,7 @@ describe("Database Schema Relations", () => {
         prisma.container.create({
           data: {
             vmid: 4000, // Duplicate vmid
-            hostname: "container-2",
-            status: "running",
-            cores: 2,
-            memory: 2048,
-            swap: 2048,
-            diskSize: 10,
+            lifecycle: "ready",
             rootPassword: encrypt("pass"),
             nodeId: node.id,
           },

@@ -32,7 +32,7 @@ const CHECKS = {
       "PackageManager",
       "TemplateSource",
       "FilePolicy",
-      "ContainerStatus",
+      "ContainerLifecycle",
       "ServiceType",
       "ServiceStatus",
       "EventType",
@@ -115,8 +115,8 @@ const CHECKS = {
 
     // Check for indexes
     const indexChecks = [
-      "Container_vmid_idx",
-      "Container_status_idx",
+      // Removed: "Container_vmid_idx" (redundant with unique constraint)
+      "Container_lifecycle_idx",
       "ContainerEvent_containerId_createdAt_idx",
     ];
 
