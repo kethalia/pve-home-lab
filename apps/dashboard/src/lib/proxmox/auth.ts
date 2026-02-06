@@ -3,9 +3,19 @@
  */
 
 import "server-only";
+import { fetch as undiciFetch, Agent } from "undici";
 import { ProxmoxClient } from "./client";
 import { TicketResponseSchema } from "./schemas";
 import type { ProxmoxTicketCredentials, ProxmoxTicketResponse } from "./types";
+
+/**
+ * Undici agent that accepts self-signed certificates (Proxmox default).
+ * We use undici's fetch directly because Next.js patches the global fetch
+ * and strips the `dispatcher` option needed for TLS configuration.
+ */
+const insecureAgent = new Agent({
+  connect: { rejectUnauthorized: false },
+});
 
 /**
  * Login to Proxmox VE and obtain a ticket
@@ -26,23 +36,20 @@ export async function login(
     password,
   });
 
-  const response = await fetch(loginUrl, {
+  const response = await undiciFetch(loginUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: body.toString(),
-    // @ts-expect-error - Node.js 18+ undici dispatcher for self-signed certs
-    dispatcher: new (await import("undici")).Agent({
-      connect: { rejectUnauthorized: false },
-    }),
+    dispatcher: insecureAgent,
   });
 
   if (!response.ok) {
     throw new Error(`Login failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as { data: unknown };
   const ticketData = TicketResponseSchema.parse(data.data);
 
   return createTicketCredentials(ticketData);

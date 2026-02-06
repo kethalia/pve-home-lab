@@ -81,13 +81,21 @@ export async function loginAction(
 
     return { success: true };
   } catch (error) {
+    console.error("[loginAction] Auth error:", error);
+
     // Don't leak Proxmox error details to the client
     if (error instanceof Error) {
+      const msg = error.message;
       if (
-        error.message.includes("fetch") ||
-        error.message.includes("ECONNREFUSED") ||
-        error.message.includes("ENOTFOUND") ||
-        error.message.includes("ETIMEDOUT")
+        msg.includes("fetch") ||
+        msg.includes("ECONNREFUSED") ||
+        msg.includes("ENOTFOUND") ||
+        msg.includes("ETIMEDOUT") ||
+        msg.includes("CERT") ||
+        msg.includes("certificate") ||
+        msg.includes("self-signed") ||
+        msg.includes("SSL") ||
+        msg.includes("unable to verify")
       ) {
         return { success: false, error: "Unable to reach Proxmox server" };
       }

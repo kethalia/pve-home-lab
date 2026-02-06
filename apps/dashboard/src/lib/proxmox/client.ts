@@ -3,7 +3,7 @@
  */
 
 import "server-only";
-import { Agent as UndiciAgent } from "undici";
+import { fetch as undiciFetch, Agent as UndiciAgent } from "undici";
 import type { ZodType } from "zod";
 import { ProxmoxApiError, ProxmoxAuthError, ProxmoxError } from "./errors";
 import type {
@@ -102,7 +102,7 @@ export class ProxmoxClient {
       "Content-Type": "application/json",
     };
 
-    const fetchOptions: RequestInit & { dispatcher?: UndiciAgent } = {
+    const fetchOptions: Record<string, unknown> = {
       method,
       headers,
       dispatcher: this.dispatcher,
@@ -118,7 +118,10 @@ export class ProxmoxClient {
     }
 
     try {
-      const response = await fetch(url, fetchOptions);
+      const response = await undiciFetch(
+        url,
+        fetchOptions as Parameters<typeof undiciFetch>[1],
+      );
 
       // Handle authentication errors
       if (response.status === 401) {
@@ -192,7 +195,9 @@ export class ProxmoxClient {
   /**
    * Parse error response from Proxmox
    */
-  private async parseErrorResponse(response: Response): Promise<unknown> {
+  private async parseErrorResponse(response: {
+    text(): Promise<string>;
+  }): Promise<unknown> {
     try {
       const text = await response.text();
       if (!text) return null;
