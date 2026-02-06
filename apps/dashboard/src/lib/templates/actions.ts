@@ -4,7 +4,8 @@
  * Template Server Actions
  *
  * Server actions for template discovery, status checking, and mutations.
- * All use authActionClient for session validation and error handling.
+ * All actions use authActionClient (next-safe-action) for consistent
+ * auth handling, validation, and error responses.
  */
 
 import { revalidatePath } from "next/cache";
@@ -15,6 +16,11 @@ import { DatabaseService, prisma } from "@/lib/db";
 import { idSchema } from "@/lib/packages/schemas";
 
 import { discoverTemplates } from "./discovery";
+import { templateFormSchema, templateUpdateSchema } from "./schemas";
+
+// ============================================================================
+// Discovery Actions
+// ============================================================================
 
 /**
  * Trigger a full template discovery scan.
@@ -64,4 +70,107 @@ export const deleteTemplateAction = authActionClient
     await DatabaseService.deleteTemplate(id);
     revalidatePath("/templates");
     redirect("/templates");
+  });
+
+// ============================================================================
+// Template CRUD Actions (safe-action based)
+// ============================================================================
+
+/**
+ * Helper to map validated form data to DatabaseService input shape.
+ */
+function toDbInput(data: {
+  name: string;
+  description?: string;
+  osTemplate?: string;
+  cores?: number | null;
+  memory?: number | null;
+  swap?: number | null;
+  diskSize?: number | null;
+  storage?: string;
+  bridge?: string;
+  unprivileged: boolean;
+  nesting: boolean;
+  keyctl: boolean;
+  fuse: boolean;
+  tags?: string;
+  scripts: {
+    name: string;
+    order: number;
+    content: string;
+    description?: string;
+    enabled: boolean;
+  }[];
+  files: {
+    name: string;
+    targetPath: string;
+    policy: string;
+    content: string;
+  }[];
+  bucketIds: string[];
+}) {
+  return {
+    name: data.name,
+    description: data.description || undefined,
+    osTemplate: data.osTemplate || undefined,
+    cores: data.cores ?? undefined,
+    memory: data.memory ?? undefined,
+    swap: data.swap ?? undefined,
+    diskSize: data.diskSize ?? undefined,
+    storage: data.storage || undefined,
+    bridge: data.bridge || undefined,
+    unprivileged: data.unprivileged,
+    nesting: data.nesting,
+    keyctl: data.keyctl,
+    fuse: data.fuse,
+    tags: data.tags || undefined,
+    scripts: data.scripts.length > 0 ? data.scripts : undefined,
+    files:
+      data.files.length > 0
+        ? data.files.map((f) => ({
+            ...f,
+            policy: f.policy as "replace" | "default" | "backup",
+          }))
+        : undefined,
+    bucketIds: data.bucketIds.length > 0 ? data.bucketIds : undefined,
+  };
+}
+
+/**
+ * Create a new template.
+ *
+ * Validates with Zod, creates template atomically via DatabaseService,
+ * and returns the new template ID for client-side redirect.
+ */
+export const createTemplateAction = authActionClient
+  .schema(templateFormSchema)
+  .action(async ({ parsedInput }) => {
+    const template = await DatabaseService.createTemplate(
+      toDbInput(parsedInput),
+    );
+    revalidatePath("/templates");
+    return { templateId: template.id };
+  });
+
+/**
+ * Update an existing template.
+ *
+ * Validates with Zod (including ID), updates template and all
+ * associated data atomically, and returns the template ID.
+ */
+export const updateTemplateAction = authActionClient
+  .schema(templateUpdateSchema)
+  .action(async ({ parsedInput: { id, ...data } }) => {
+    await DatabaseService.updateTemplate(id, {
+      ...toDbInput(data),
+      scripts: data.scripts,
+      files: data.files.map((f) => ({
+        ...f,
+        policy: f.policy as "replace" | "default" | "backup",
+      })),
+      bucketIds: data.bucketIds,
+    });
+    revalidatePath("/templates");
+    revalidatePath(`/templates/${id}`);
+    return { templateId: id };
   });

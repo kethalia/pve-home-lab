@@ -6,7 +6,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAction } from "next-safe-action/hooks";
+import { AlertCircle } from "lucide-react";
 import { loginAction } from "@/lib/auth/actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardHeader,
@@ -131,7 +133,10 @@ export default function LoginPage() {
             />
 
             {result.serverError && (
-              <p className="text-sm text-destructive">{result.serverError}</p>
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" />
+                <AlertDescription>{result.serverError}</AlertDescription>
+              </Alert>
             )}
 
             <Button type="submit" className="w-full" disabled={isPending}>

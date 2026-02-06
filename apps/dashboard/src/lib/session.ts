@@ -95,8 +95,10 @@ export async function getSessionData(): Promise<RedisSessionData | null> {
   const raw = await redis.get(`${SESSION_PREFIX}${session.sessionId}`);
 
   if (!raw) {
-    // Redis session gone but cookie still exists — clean up cookie
-    session.destroy();
+    // Redis session gone but cookie still exists — return null.
+    // Cookie cleanup happens in middleware or logout action, not here,
+    // because this function is called from RSC layouts where cookie
+    // writes are forbidden (Next.js 16+).
     return null;
   }
 
@@ -106,9 +108,9 @@ export async function getSessionData(): Promise<RedisSessionData | null> {
     // Validate not expired
     const expiresAt = new Date(data.expiresAt);
     if (expiresAt <= new Date()) {
-      // Session expired — clean up both Redis and cookie
+      // Session expired — clean up Redis key only.
+      // Cookie cleanup happens in middleware or logout action.
       await redis.del(`${SESSION_PREFIX}${session.sessionId}`);
-      session.destroy();
       return null;
     }
 

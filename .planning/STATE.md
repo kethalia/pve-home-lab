@@ -3,12 +3,12 @@
 ## Current Position
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
-**Phase:** 02-template-system — In progress
-**Plan:** 3 of 5 in current phase
-**Status:** Completed 02-03-PLAN.md
-**Last activity:** 2026-02-06 — Completed 02-03-PLAN.md
+**Phase:** 02-template-system — Complete
+**Plan:** 5 of 5 in current phase
+**Status:** Phase 02 complete
+**Last activity:** 2026-02-06 — Completed 02-05-PLAN.md
 
-Progress: ███░░░░░░░ 33% (5/15 plans)
+Progress: █████░░░░░ 47% (7/15 plans)
 
 ## Completed Work
 
@@ -19,54 +19,40 @@ Progress: ███░░░░░░░ 33% (5/15 plans)
 - ProxmoxClient with retry logic, SSL handling, Zod validation
 - iron-session v8 + Redis SSO auth, login page, route protection middleware
 
-### Phase 2: Template System — In Progress
+### Phase 2: Template System ✓
 
 **02-01 — Template discovery engine** ✓
-
-- Pure filesystem parser (template.conf, scripts, packages, config files with sidecars)
-- Prisma-based discovery engine with atomic transaction sync
-- Server actions: discoverTemplatesAction, getDiscoveryStatus
-- prisma instance exported from db.ts for complex operations
-
 **02-02 — Template browser page** ✓
-
-- DatabaseService template query methods (list, getById, getTags, count, delete)
-- /templates page with card grid, search, tag filtering, discovery button
-- TemplateCard, TemplateSearch, DiscoverButton components
-- Loading skeleton, empty state, no-results state
-
 **02-03 — Package bucket CRUD** ✓
+**02-04 — Template detail page** ✓
+**02-05 — Template creator and editor forms** ✓
 
-- DatabaseService PackageBucket/Package CRUD (9 methods)
-- Server actions with Zod validation for bucket and package mutations
-- /templates/packages management page with bucket cards, create/edit dialogs
-- Inline package add/remove, bulk import from .apt content
-- Sonner toast notifications infrastructure in root layout
+- DatabaseService.createTemplate/updateTemplate with atomic transactions
+- createTemplateAction/updateTemplateAction with Zod validation
+- TemplateForm shared component (6 sections: basics, resources, features, scripts, packages, files)
+- ScriptEditor/FileEditor controlled sub-components
+- /templates/new and /templates/[id]/edit pages
 
 ## Decisions Made
 
 - Tech stack locked: Next.js 15, shadcn/ui, Tailwind v4, Prisma, PostgreSQL, Redis, BullMQ
-- Proxmox auth via ticket-based SSO (not API tokens for user sessions)
-- Container lifecycle enum: `creating/ready/error`
-- AES-256-GCM encryption for sensitive fields
 - DatabaseService class pattern for data access + direct prisma export for transactions
-- Port 3001 for dev server
-- Cookie stores only session ID — session data in Redis with 2h TTL
-- iron-session v8, undici fetch, Edge middleware cookie-existence check
-- Pure parser → DB sync separation: parser.ts reads filesystem, discovery.ts writes DB
+- useActionState for form-based mutations, useTransition for direct server action calls
 - Delete+recreate for child records (scripts/files/packages) ensures clean sync
-- Packages in PackageBucket with bucketId; templateId reserved for custom packages
 - Tags stored as semicolon-separated string matching template.conf format
 - Templates page under (dashboard) route group for sidebar layout inheritance
 - Server-side filtering via URL search params for shareability
-- Tag filtering uses AND logic (template must contain ALL selected tags)
 - BucketFormDialog uses mode prop (create/edit) to avoid duplicate dialog components
 - Sonner toasts for all CRUD feedback; Toaster in root layout for app-wide access
-- useActionState for form-based mutations, useTransition for direct server action calls
+- Tab components: Server Components for static display, Client Components for collapsible state
+- File policy badges color-coded: replace=destructive, default=secondary, backup=outline
+- Hidden JSON fields for complex nested data serialization in forms
+- Bucket selection copies packages into template (template owns its package list)
+- **CONVENTION: Always use shadcn/ui components** — never create custom HTML elements (badges, alerts, forms, selects, etc.) when a shadcn component exists or can be installed. Custom implementations only as last resort. Forms must use shadcn Form (react-hook-form) not raw `<form>` tags. Documented in `apps/dashboard/CLAUDE.md`. (#102)
+- **CONVENTION: Cookie writes forbidden in RSC** — never call session.destroy() or modify cookies in Server Components or layouts. Cookie mutations only in Server Actions, Route Handlers, or middleware. (Next.js 16+ requirement)
 
 ## Pending Work
 
-- Phase 2: Plans 02-04 through 02-05 (template detail page, editor)
 - Phase 3: Container Creation (#80-82)
 - Phase 4: Container Management (#83-86)
 - Phase 5: Web UI & Monitoring (#87-88)
@@ -78,6 +64,6 @@ Progress: ███░░░░░░░ 33% (5/15 plans)
 
 ## Session Continuity
 
-Last session: 2026-02-06T08:42:05Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-02-06T14:21:55Z
+Stopped at: Completed 02-05-PLAN.md (Phase 02 complete)
 Resume file: None

@@ -16,6 +16,7 @@ import type {
   Package,
   PackageBucket,
   PackageManager,
+  FilePolicy,
 } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -65,6 +66,41 @@ export type TemplateWithDetails = Template & {
 export type BucketWithPackages = PackageBucket & {
   packages: Package[];
 };
+
+/** Input for creating a new template with all related data */
+export interface CreateTemplateInput {
+  name: string;
+  description?: string;
+  osTemplate?: string;
+  cores?: number;
+  memory?: number;
+  swap?: number;
+  diskSize?: number;
+  storage?: string;
+  bridge?: string;
+  unprivileged?: boolean;
+  nesting?: boolean;
+  keyctl?: boolean;
+  fuse?: boolean;
+  tags?: string;
+  scripts?: {
+    name: string;
+    order: number;
+    content: string;
+    description?: string;
+    enabled?: boolean;
+  }[];
+  files?: {
+    name: string;
+    targetPath: string;
+    policy: FilePolicy;
+    content: string;
+  }[];
+  bucketIds?: string[];
+}
+
+/** Input for updating an existing template (all fields optional) */
+export type UpdateTemplateInput = Partial<CreateTemplateInput>;
 
 /**
  * Database Service - Centralized data access layer
@@ -244,6 +280,184 @@ export class DatabaseService {
    */
   static async deleteTemplate(id: string): Promise<void> {
     await this.prisma.template.delete({ where: { id } });
+  }
+
+  /**
+   * Create a new template with scripts, files, and bucket-linked packages atomically.
+   */
+  static async createTemplate(
+    data: CreateTemplateInput,
+  ): Promise<TemplateWithDetails> {
+    const { scripts, files, bucketIds, ...templateData } = data;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Create the template with base fields
+      const template = await tx.template.create({
+        data: {
+          ...templateData,
+          source: "custom",
+          scripts: scripts
+            ? {
+                create: scripts.map((s) => ({
+                  name: s.name,
+                  order: s.order,
+                  content: s.content,
+                  description: s.description,
+                  enabled: s.enabled ?? true,
+                })),
+              }
+            : undefined,
+          files: files
+            ? {
+                create: files.map((f) => ({
+                  name: f.name,
+                  targetPath: f.targetPath,
+                  policy: f.policy,
+                  content: f.content,
+                })),
+              }
+            : undefined,
+        },
+        include: {
+          scripts: { orderBy: { order: "asc" } },
+          files: true,
+          packages: true,
+        },
+      });
+
+      // Copy packages from selected buckets into template
+      if (bucketIds && bucketIds.length > 0) {
+        const bucketPackages = await tx.package.findMany({
+          where: { bucketId: { in: bucketIds } },
+        });
+
+        // De-duplicate packages by manager/name/version so the template
+        // does not end up with multiple identical package entries.
+        const seen = new Set<string>();
+        const unique = bucketPackages.filter((p) => {
+          const key = `${p.manager}::${p.name}::${p.version ?? ""}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (unique.length > 0) {
+          await tx.package.createMany({
+            data: unique.map((p) => ({
+              name: p.name,
+              manager: p.manager,
+              version: p.version,
+              templateId: template.id,
+            })),
+          });
+        }
+
+        // Re-fetch with packages
+        return tx.template.findUniqueOrThrow({
+          where: { id: template.id },
+          include: {
+            scripts: { orderBy: { order: "asc" } },
+            files: true,
+            packages: true,
+          },
+        });
+      }
+
+      return template;
+    });
+  }
+
+  /**
+   * Update an existing template with full replace of scripts, files, and packages.
+   * Uses delete+recreate strategy for child records to handle reordering cleanly.
+   */
+  static async updateTemplate(
+    id: string,
+    data: UpdateTemplateInput,
+  ): Promise<TemplateWithDetails> {
+    const { scripts, files, bucketIds, ...templateData } = data;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Update base template fields
+      await tx.template.update({
+        where: { id },
+        data: templateData,
+      });
+
+      // Replace scripts (delete all, create new)
+      if (scripts !== undefined) {
+        await tx.templateScript.deleteMany({ where: { templateId: id } });
+        if (scripts.length > 0) {
+          await tx.templateScript.createMany({
+            data: scripts.map((s) => ({
+              name: s.name,
+              order: s.order,
+              content: s.content,
+              description: s.description,
+              enabled: s.enabled ?? true,
+              templateId: id,
+            })),
+          });
+        }
+      }
+
+      // Replace files (delete all, create new)
+      if (files !== undefined) {
+        await tx.templateFile.deleteMany({ where: { templateId: id } });
+        if (files.length > 0) {
+          await tx.templateFile.createMany({
+            data: files.map((f) => ({
+              name: f.name,
+              targetPath: f.targetPath,
+              policy: f.policy,
+              content: f.content,
+              templateId: id,
+            })),
+          });
+        }
+      }
+
+      // Replace template-linked packages (from bucket selections)
+      if (bucketIds !== undefined) {
+        await tx.package.deleteMany({ where: { templateId: id } });
+
+        if (bucketIds.length > 0) {
+          const bucketPackages = await tx.package.findMany({
+            where: { bucketId: { in: bucketIds } },
+          });
+
+          // De-duplicate by manager/name/version
+          const seen = new Set<string>();
+          const unique = bucketPackages.filter((p) => {
+            const key = `${p.manager}::${p.name}::${p.version ?? ""}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+          if (unique.length > 0) {
+            await tx.package.createMany({
+              data: unique.map((p) => ({
+                name: p.name,
+                manager: p.manager,
+                version: p.version,
+                templateId: id,
+              })),
+            });
+          }
+        }
+      }
+
+      // Return updated template with all relations
+      return tx.template.findUniqueOrThrow({
+        where: { id },
+        include: {
+          scripts: { orderBy: { order: "asc" } },
+          files: true,
+          packages: true,
+        },
+      });
+    });
   }
 
   // ============================================================================

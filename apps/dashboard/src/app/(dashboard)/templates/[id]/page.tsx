@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
@@ -11,6 +12,25 @@ import { TemplateConfigTab } from "@/components/templates/template-config-tab";
 import { TemplateScriptsTab } from "@/components/templates/template-scripts-tab";
 import { TemplatePackagesTab } from "@/components/templates/template-packages-tab";
 import { TemplateFilesTab } from "@/components/templates/template-files-tab";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const template = await DatabaseService.getTemplateById(id);
+
+  if (!template) {
+    return { title: "Template Not Found" };
+  }
+
+  return {
+    title: template.name,
+    description:
+      template.description ?? `Template details for ${template.name}`,
+  };
+}
 
 export default async function TemplateDetailPage({
   params,
