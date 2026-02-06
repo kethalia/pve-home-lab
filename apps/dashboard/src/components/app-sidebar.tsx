@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileCode, Box, Settings } from "lucide-react";
+import { LayoutDashboard, FileCode, Box, Settings, LogOut } from "lucide-react";
+import { logoutAction } from "@/lib/auth/actions";
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -40,7 +42,7 @@ const navItems = [
   },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ username }: { username?: string }) {
   const pathname = usePathname();
 
   return (
@@ -88,6 +90,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            {username && (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
+                {username}
+              </div>
+            )}
+            <form action={logoutAction}>
+              <SidebarMenuButton asChild tooltip="Sign out">
+                <button type="submit" className="w-full">
+                  <LogOut />
+                  <span>Sign out</span>
+                </button>
+              </SidebarMenuButton>
+            </form>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
