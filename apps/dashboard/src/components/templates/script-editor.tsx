@@ -17,11 +17,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 export interface ScriptInput {
+  _key: string;
   name: string;
   order: number;
   content: string;
   description?: string;
   enabled: boolean;
+}
+
+let scriptKeyCounter = 0;
+export function createScriptInput(
+  init: Omit<ScriptInput, "_key"> = {
+    name: "",
+    order: 1,
+    content: "",
+    description: "",
+    enabled: true,
+  },
+): ScriptInput {
+  return { ...init, _key: `script-${++scriptKeyCounter}` };
 }
 
 interface ScriptEditorProps {
@@ -38,13 +52,13 @@ export function ScriptEditor({ scripts, onChange }: ScriptEditorProps) {
       scripts.length > 0 ? Math.max(...scripts.map((s) => s.order)) + 1 : 1;
     onChange([
       ...scripts,
-      {
+      createScriptInput({
         name: "",
         order: nextOrder,
         content: "",
         description: "",
         enabled: true,
-      },
+      }),
     ]);
   };
 
@@ -75,7 +89,10 @@ export function ScriptEditor({ scripts, onChange }: ScriptEditorProps) {
         </p>
       ) : (
         sorted.map((script, index) => (
-          <div key={index} className="relative rounded-lg border p-4 space-y-3">
+          <div
+            key={script._key}
+            className="relative rounded-lg border p-4 space-y-3"
+          >
             {/* Header row: order, name, enabled toggle, remove */}
             <div className="flex items-center gap-3">
               <div className="w-16">

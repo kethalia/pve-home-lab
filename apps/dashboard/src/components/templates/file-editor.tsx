@@ -22,10 +22,23 @@ import {
 } from "@/components/ui/select";
 
 export interface FileInput {
+  _key: string;
   name: string;
   targetPath: string;
   policy: "replace" | "default" | "backup";
   content: string;
+}
+
+let fileKeyCounter = 0;
+export function createFileInput(
+  init: Omit<FileInput, "_key"> = {
+    name: "",
+    targetPath: "",
+    policy: "replace",
+    content: "",
+  },
+): FileInput {
+  return { ...init, _key: `file-${++fileKeyCounter}` };
 }
 
 interface FileEditorProps {
@@ -35,10 +48,7 @@ interface FileEditorProps {
 
 export function FileEditor({ files, onChange }: FileEditorProps) {
   const addFile = () => {
-    onChange([
-      ...files,
-      { name: "", targetPath: "", policy: "replace", content: "" },
-    ]);
+    onChange([...files, createFileInput()]);
   };
 
   const removeFile = (index: number) => {
@@ -60,7 +70,10 @@ export function FileEditor({ files, onChange }: FileEditorProps) {
         </p>
       ) : (
         files.map((file, index) => (
-          <div key={index} className="relative rounded-lg border p-4 space-y-3">
+          <div
+            key={file._key}
+            className="relative rounded-lg border p-4 space-y-3"
+          >
             {/* Header row: name, remove */}
             <div className="flex items-start gap-3">
               <div className="flex-1">

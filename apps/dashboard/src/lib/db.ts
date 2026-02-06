@@ -331,9 +331,19 @@ export class DatabaseService {
           where: { bucketId: { in: bucketIds } },
         });
 
-        if (bucketPackages.length > 0) {
+        // De-duplicate packages by manager/name/version so the template
+        // does not end up with multiple identical package entries.
+        const seen = new Set<string>();
+        const unique = bucketPackages.filter((p) => {
+          const key = `${p.manager}::${p.name}::${p.version ?? ""}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (unique.length > 0) {
           await tx.package.createMany({
-            data: bucketPackages.map((p) => ({
+            data: unique.map((p) => ({
               name: p.name,
               manager: p.manager,
               version: p.version,
@@ -416,9 +426,18 @@ export class DatabaseService {
             where: { bucketId: { in: bucketIds } },
           });
 
-          if (bucketPackages.length > 0) {
+          // De-duplicate by manager/name/version
+          const seen = new Set<string>();
+          const unique = bucketPackages.filter((p) => {
+            const key = `${p.manager}::${p.name}::${p.version ?? ""}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+          if (unique.length > 0) {
             await tx.package.createMany({
-              data: bucketPackages.map((p) => ({
+              data: unique.map((p) => ({
                 name: p.name,
                 manager: p.manager,
                 version: p.version,

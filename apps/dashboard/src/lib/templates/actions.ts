@@ -11,7 +11,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 import { authActionClient } from "@/lib/safe-action";
 import { DatabaseService, prisma } from "@/lib/db";
@@ -97,17 +96,10 @@ function parseFormData(formData: FormData) {
   let files: unknown[] = [];
   let bucketIds: string[] = [];
 
-  try {
-    scripts = scriptsRaw ? JSON.parse(scriptsRaw) : [];
-  } catch {
-    scripts = [];
-  }
-
-  try {
-    files = filesRaw ? JSON.parse(filesRaw) : [];
-  } catch {
-    files = [];
-  }
+  // Let JSON.parse throw — Zod validation will catch structural issues,
+  // and parse errors surface as actionable feedback instead of silent data loss.
+  scripts = scriptsRaw ? JSON.parse(scriptsRaw) : [];
+  files = filesRaw ? JSON.parse(filesRaw) : [];
 
   if (bucketIdsRaw) {
     bucketIds = bucketIdsRaw.split(",").filter(Boolean);
@@ -239,6 +231,7 @@ export async function createTemplateAction(
     bucketIds,
   } = parsed.data;
 
+  let templateId: string;
   try {
     const template = await DatabaseService.createTemplate({
       name,
@@ -265,18 +258,15 @@ export async function createTemplateAction(
           : undefined,
       bucketIds: bucketIds.length > 0 ? bucketIds : undefined,
     });
-
-    revalidatePath("/templates");
-    redirect(`/templates/${template.id}`);
+    templateId = template.id;
   } catch (error) {
-    // redirect() throws a special error — re-throw it
-    if (isRedirectError(error)) {
-      throw error;
-    }
     const message =
       error instanceof Error ? error.message : "Failed to create template";
     return { success: false, error: message };
   }
+
+  revalidatePath("/templates");
+  redirect(`/templates/${templateId}`);
 }
 
 /**
@@ -295,10 +285,15 @@ export async function updateTemplateAction(
     return { success: false, error: "Unauthorized" };
   }
 
-  const id = formData.get("id") as string;
-  if (!id) {
-    return { success: false, error: "Template ID is required" };
+  const rawId = formData.get("id") as string;
+  const idParsed = idSchema.safeParse({ id: rawId });
+  if (!idParsed.success) {
+    return {
+      success: false,
+      error: idParsed.error.issues[0]?.message ?? "Invalid template ID",
+    };
   }
+  const { id } = idParsed.data;
 
   // Parse and validate
   const raw = parseFormData(formData);
@@ -354,17 +349,13 @@ export async function updateTemplateAction(
       })),
       bucketIds,
     });
-
-    revalidatePath("/templates");
-    revalidatePath(`/templates/${id}`);
-    redirect(`/templates/${id}`);
   } catch (error) {
-    // redirect() throws a special error — re-throw it
-    if (isRedirectError(error)) {
-      throw error;
-    }
     const message =
       error instanceof Error ? error.message : "Failed to update template";
     return { success: false, error: message };
   }
+
+  revalidatePath("/templates");
+  revalidatePath(`/templates/${id}`);
+  redirect(`/templates/${id}`);
 }

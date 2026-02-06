@@ -30,9 +30,14 @@ import {
 } from "@/components/ui/card";
 import {
   ScriptEditor,
+  createScriptInput,
   type ScriptInput,
 } from "@/components/templates/script-editor";
-import { FileEditor, type FileInput } from "@/components/templates/file-editor";
+import {
+  FileEditor,
+  createFileInput,
+  type FileInput,
+} from "@/components/templates/file-editor";
 
 // ============================================================================
 // Types
@@ -62,31 +67,41 @@ export function TemplateForm({
   // ----- Complex state (scripts, files, selected buckets) -----
 
   const [scripts, setScripts] = useState<ScriptInput[]>(
-    template?.scripts.map((s) => ({
-      name: s.name,
-      order: s.order,
-      content: s.content,
-      description: s.description ?? "",
-      enabled: s.enabled,
-    })) ?? [],
+    template?.scripts.map((s) =>
+      createScriptInput({
+        name: s.name,
+        order: s.order,
+        content: s.content,
+        description: s.description ?? "",
+        enabled: s.enabled,
+      }),
+    ) ?? [],
   );
 
   const [files, setFiles] = useState<FileInput[]>(
-    template?.files.map((f) => ({
-      name: f.name,
-      targetPath: f.targetPath,
-      policy: f.policy as "replace" | "default" | "backup",
-      content: f.content,
-    })) ?? [],
+    template?.files.map((f) =>
+      createFileInput({
+        name: f.name,
+        targetPath: f.targetPath,
+        policy: f.policy as "replace" | "default" | "backup",
+        content: f.content,
+      }),
+    ) ?? [],
   );
 
   // Determine which buckets are "selected" for edit mode by checking
   // if the template's packages overlap with bucket packages
   const [selectedBucketIds, setSelectedBucketIds] = useState<string[]>(() => {
     if (!template) return [];
-    const templatePkgNames = new Set(template.packages.map((p) => p.name));
+    const templatePkgKeys = new Set(
+      template.packages.map((p) => `${p.manager}:${p.name}:${p.version ?? ""}`),
+    );
     return buckets
-      .filter((b) => b.packages.some((p) => templatePkgNames.has(p.name)))
+      .filter((b) =>
+        b.packages.some((p) =>
+          templatePkgKeys.has(`${p.manager}:${p.name}:${p.version ?? ""}`),
+        ),
+      )
       .map((b) => b.id);
   });
 
