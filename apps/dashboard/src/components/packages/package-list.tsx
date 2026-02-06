@@ -1,14 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useAction } from "next-safe-action/hooks";
 import { X, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 import type { Package, PackageManager } from "@/generated/prisma/client";
+import {
+  packageSchema,
+  bulkImportFormSchema,
+  type PackageFormValues,
+  type BulkImportFormValues,
+} from "@/lib/packages/schemas";
+import {
+  addPackageAction,
+  removePackageAction,
+  bulkImportAction,
+} from "@/lib/packages/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,28 +38,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  addPackageAction,
-  removePackageAction,
-  bulkImportAction,
-} from "@/lib/packages/actions";
-
-// ============================================================================
-// Schemas
-// ============================================================================
-
-const addPackageSchema = z.object({
-  name: z.string().min(1, "Package name is required"),
-  manager: z.enum(["apt", "npm", "pip", "custom"]),
-});
-
-const bulkImportSchema = z.object({
-  content: z.string().min(1, "Paste package content to import"),
-  manager: z.enum(["apt", "npm", "pip", "custom"]),
-});
-
-type AddPackageValues = z.infer<typeof addPackageSchema>;
-type BulkImportValues = z.infer<typeof bulkImportSchema>;
 
 // ============================================================================
 // PackageList
@@ -64,57 +52,52 @@ export function PackageList({
   manager?: PackageManager;
 }) {
   const [showBulkImport, setShowBulkImport] = useState(false);
-  const [addPending, startAddTransition] = useTransition();
-  const [bulkPending, startBulkTransition] = useTransition();
-  const router = useRouter();
 
   // Add package form
-  const addForm = useForm<AddPackageValues>({
-    resolver: zodResolver(addPackageSchema),
+  const addForm = useForm<PackageFormValues>({
+    resolver: zodResolver(packageSchema),
     defaultValues: { name: "", manager: "apt" },
   });
 
-  const onAddPackage = (values: AddPackageValues) => {
-    startAddTransition(async () => {
-      const formData = new FormData();
-      formData.set("bucketId", bucketId);
-      formData.set("name", values.name);
-      formData.set("manager", values.manager);
-
-      const result = await addPackageAction({ success: false }, formData);
-      if (result.success && result.message) {
-        toast.success(result.message);
+  const { execute: executeAdd, isPending: addPending } = useAction(
+    addPackageAction,
+    {
+      onSuccess: ({ data }) => {
+        toast.success(data?.message ?? "Package added");
         addForm.reset();
-        router.refresh();
-      } else if (!result.success && result.error) {
-        toast.error(result.error);
-      }
-    });
+      },
+      onError: ({ error }) => {
+        toast.error(error.serverError ?? "Failed to add package");
+      },
+    },
+  );
+
+  const onAddPackage = (values: PackageFormValues) => {
+    executeAdd({ bucketId, ...values });
   };
 
   // Bulk import form
-  const bulkForm = useForm<BulkImportValues>({
-    resolver: zodResolver(bulkImportSchema),
+  const bulkForm = useForm<BulkImportFormValues>({
+    resolver: zodResolver(bulkImportFormSchema),
     defaultValues: { content: "", manager: "apt" },
   });
 
-  const onBulkImport = (values: BulkImportValues) => {
-    startBulkTransition(async () => {
-      const formData = new FormData();
-      formData.set("bucketId", bucketId);
-      formData.set("content", values.content);
-      formData.set("manager", values.manager);
-
-      const result = await bulkImportAction({ success: false }, formData);
-      if (result.success && result.message) {
-        toast.success(result.message);
+  const { execute: executeBulk, isPending: bulkPending } = useAction(
+    bulkImportAction,
+    {
+      onSuccess: ({ data }) => {
+        toast.success(data?.message ?? "Packages imported");
         bulkForm.reset();
         setShowBulkImport(false);
-        router.refresh();
-      } else if (!result.success && result.error) {
-        toast.error(result.error);
-      }
-    });
+      },
+      onError: ({ error }) => {
+        toast.error(error.serverError ?? "Failed to import packages");
+      },
+    },
+  );
+
+  const onBulkImport = (values: BulkImportFormValues) => {
+    executeBulk({ bucketId, ...values });
   };
 
   return (
@@ -267,20 +250,14 @@ export function PackageList({
 // ============================================================================
 
 function PackageBadge({ pkg }: { pkg: Package }) {
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
-  const handleRemove = () => {
-    startTransition(async () => {
-      const result = await removePackageAction(pkg.id);
-      if (result.success) {
-        toast.success("Package removed");
-        router.refresh();
-      } else {
-        toast.error(result.error ?? "Failed to remove package");
-      }
-    });
-  };
+  const { execute, isPending } = useAction(removePackageAction, {
+    onSuccess: () => {
+      toast.success("Package removed");
+    },
+    onError: ({ error }) => {
+      toast.error(error.serverError ?? "Failed to remove package");
+    },
+  });
 
   return (
     <Badge
@@ -288,14 +265,16 @@ function PackageBadge({ pkg }: { pkg: Package }) {
       className={`gap-1 pr-1 ${isPending ? "opacity-50" : ""}`}
     >
       <span className="text-xs">{pkg.name}</span>
-      <button
+      <Button
         type="button"
-        onClick={handleRemove}
+        variant="ghost"
+        size="icon-xs"
+        onClick={() => execute({ id: pkg.id })}
         disabled={isPending}
-        className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+        className="size-4 rounded-full"
       >
         <X className="size-2.5" />
-      </button>
+      </Button>
     </Badge>
   );
 }

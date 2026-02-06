@@ -4,6 +4,11 @@ import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupIcon,
+  InputGroupAction,
+} from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -89,26 +94,24 @@ function TemplateSearchInner({ tags }: { tags: string[] }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Search input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+      <InputGroup>
+        <InputGroupIcon side="leading">
+          <Search />
+        </InputGroupIcon>
         <Input
           placeholder="Search templates..."
           value={searchValue}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-9"
         />
         {hasFilters && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="absolute right-2 top-1/2 -translate-y-1/2"
-            onClick={clearFilters}
-          >
-            <X className="size-3" />
-            <span className="sr-only">Clear filters</span>
-          </Button>
+          <InputGroupAction side="trailing">
+            <Button variant="ghost" size="icon-xs" onClick={clearFilters}>
+              <X className="size-3" />
+              <span className="sr-only">Clear filters</span>
+            </Button>
+          </InputGroupAction>
         )}
-      </div>
+      </InputGroup>
 
       {/* Tag filter row */}
       {tags.length > 0 && (
@@ -120,18 +123,16 @@ function TemplateSearchInner({ tags }: { tags: string[] }) {
           {tags.map((tag) => {
             const isActive = currentTags.includes(tag);
             return (
-              <button
+              <Button
                 key={tag}
+                variant={isActive ? "default" : "secondary"}
+                size="xs"
                 onClick={() => toggleTag(tag)}
                 aria-pressed={isActive}
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                className="rounded-full"
               >
                 {tag}
-              </button>
+              </Button>
             );
           })}
         </div>

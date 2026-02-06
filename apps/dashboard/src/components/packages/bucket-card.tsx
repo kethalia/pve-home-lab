@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { useAction } from "next-safe-action/hooks";
 import { toast } from "sonner";
 
 import type { BucketWithPackages } from "@/lib/db";
+import { deleteBucketAction } from "@/lib/packages/actions";
 import {
   Card,
   CardContent,
@@ -26,22 +27,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteBucketAction } from "@/lib/packages/actions";
 import { BucketFormDialog } from "./bucket-form-dialog";
 import { PackageList } from "./package-list";
 
 export function BucketCard({ bucket }: { bucket: BucketWithPackages }) {
-  const [isPending, startTransition] = useTransition();
+  const { execute, isPending } = useAction(deleteBucketAction, {
+    onSuccess: () => {
+      toast.success("Bucket deleted");
+    },
+    onError: ({ error }) => {
+      toast.error(error.serverError ?? "Failed to delete bucket");
+    },
+  });
 
   const handleDelete = () => {
-    startTransition(async () => {
-      const result = await deleteBucketAction(bucket.id);
-      if (result.success) {
-        toast.success("Bucket deleted");
-      } else {
-        toast.error(result.error ?? "Failed to delete bucket");
-      }
-    });
+    execute({ id: bucket.id });
   };
 
   return (

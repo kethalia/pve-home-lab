@@ -1,15 +1,7 @@
 import type { TemplateWithDetails } from "@/lib/db";
+import { formatMemory, parseTags } from "@/lib/utils/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-/**
- * Format memory value: display as GB if >= 1024 MB, otherwise MB.
- */
-function formatMemory(mb: number | null): string {
-  if (mb === null) return "—";
-  if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB (${mb} MB)`;
-  return `${mb} MB`;
-}
 
 /**
  * Feature indicator: shows green "Enabled" or gray "Disabled".
@@ -46,12 +38,7 @@ export function TemplateConfigTab({
 }: {
   template: TemplateWithDetails;
 }) {
-  const tags = template.tags
-    ? template.tags
-        .split(";")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    : [];
+  const tags = parseTags(template.tags);
 
   return (
     <div className="grid gap-4">
@@ -114,8 +101,11 @@ export function TemplateConfigTab({
         <CardContent>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatItem label="CPU" value={`${template.cores ?? "—"} cores`} />
-            <StatItem label="Memory" value={formatMemory(template.memory)} />
-            <StatItem label="Swap" value={formatMemory(template.swap)} />
+            <StatItem
+              label="Memory"
+              value={formatMemory(template.memory, true)}
+            />
+            <StatItem label="Swap" value={formatMemory(template.swap, true)} />
             <StatItem
               label="Disk"
               value={template.diskSize ? `${template.diskSize} GB` : "—"}

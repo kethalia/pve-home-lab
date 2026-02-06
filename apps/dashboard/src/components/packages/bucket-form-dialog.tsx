@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useAction } from "next-safe-action/hooks";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 import type { BucketWithPackages } from "@/lib/db";
+import { bucketSchema, type BucketFormValues } from "@/lib/packages/schemas";
+import { createBucketAction, updateBucketAction } from "@/lib/packages/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,21 +29,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createBucketAction, updateBucketAction } from "@/lib/packages/actions";
-
-const bucketSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(50, "Name must be 50 characters or less"),
-  description: z
-    .string()
-    .max(200, "Description must be 200 characters or less")
-    .optional()
-    .or(z.literal("")),
-});
-
-type BucketFormValues = z.infer<typeof bucketSchema>;
 
 export function BucketFormDialog({
   mode,
@@ -54,8 +40,6 @@ export function BucketFormDialog({
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
   const form = useForm<BucketFormValues>({
     resolver: zodResolver(bucketSchema),
@@ -65,27 +49,46 @@ export function BucketFormDialog({
     },
   });
 
-  const onSubmit = (values: BucketFormValues) => {
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("name", values.name);
-      formData.set("description", values.description ?? "");
-      if (mode === "edit" && bucket) {
-        formData.set("id", bucket.id);
-      }
-
-      const action =
-        mode === "create" ? createBucketAction : updateBucketAction;
-      const result = await action({ success: false }, formData);
-      if (result.success) {
+  const { execute: executeCreate, isPending: isCreating } = useAction(
+    createBucketAction,
+    {
+      onSuccess: () => {
         setOpen(false);
         form.reset();
-        toast.success(mode === "create" ? "Bucket created" : "Bucket updated");
-        router.refresh();
-      } else {
-        form.setError("name", { message: result.error ?? "An error occurred" });
-      }
-    });
+        toast.success("Bucket created");
+      },
+      onError: ({ error }) => {
+        form.setError("name", {
+          message: error.serverError ?? "An error occurred",
+        });
+      },
+    },
+  );
+
+  const { execute: executeUpdate, isPending: isUpdating } = useAction(
+    updateBucketAction,
+    {
+      onSuccess: () => {
+        setOpen(false);
+        form.reset();
+        toast.success("Bucket updated");
+      },
+      onError: ({ error }) => {
+        form.setError("name", {
+          message: error.serverError ?? "An error occurred",
+        });
+      },
+    },
+  );
+
+  const isPending = isCreating || isUpdating;
+
+  const onSubmit = (values: BucketFormValues) => {
+    if (mode === "create") {
+      executeCreate(values);
+    } else if (bucket) {
+      executeUpdate({ id: bucket.id, ...values });
+    }
   };
 
   return (

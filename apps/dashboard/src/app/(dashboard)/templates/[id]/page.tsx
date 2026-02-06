@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 
 import { DatabaseService } from "@/lib/db";
+import { parseTags } from "@/lib/utils/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,12 +24,7 @@ export default async function TemplateDetailPage({
     notFound();
   }
 
-  const tags = template.tags
-    ? template.tags
-        .split(";")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    : [];
+  const tags = parseTags(template.tags);
 
   return (
     <div className="flex flex-1 flex-col gap-6">

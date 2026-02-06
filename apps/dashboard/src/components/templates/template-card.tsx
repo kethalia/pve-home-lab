@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { TemplateWithCounts } from "@/lib/db";
+import { formatMemory, parseTags } from "@/lib/utils/format";
 import {
   Card,
   CardContent,
@@ -10,25 +11,11 @@ import {
 } from "@/components/ui/card";
 
 /**
- * Format memory value: display as GB if >= 1024 MB, otherwise MB.
- */
-function formatMemory(mb: number | null): string {
-  if (mb === null) return "N/A";
-  if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-  return `${mb} MB`;
-}
-
-/**
  * TemplateCard — Displays a template summary in a card layout.
  * Server Component (no "use client") for the template grid.
  */
 export function TemplateCard({ template }: { template: TemplateWithCounts }) {
-  const tags = template.tags
-    ? template.tags
-        .split(";")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    : [];
+  const tags = parseTags(template.tags);
 
   return (
     <Link

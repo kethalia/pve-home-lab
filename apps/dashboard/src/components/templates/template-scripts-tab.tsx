@@ -8,6 +8,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ChevronRight, FileCode } from "lucide-react";
 
 /**
@@ -39,9 +40,10 @@ function ScriptItem({ script }: { script: TemplateScript }) {
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
-        <button
+        <Button
           type="button"
-          className="flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+          variant="ghost"
+          className="flex w-full items-center gap-3 rounded-lg border px-4 py-3 h-auto text-left hover:bg-muted/50 transition-colors"
         >
           <ChevronRight
             className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
@@ -55,7 +57,7 @@ function ScriptItem({ script }: { script: TemplateScript }) {
           <Badge variant={script.enabled ? "default" : "secondary"}>
             {script.enabled ? "Enabled" : "Disabled"}
           </Badge>
-        </button>
+        </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-7 mt-1 rounded-lg border bg-muted/30 p-4">

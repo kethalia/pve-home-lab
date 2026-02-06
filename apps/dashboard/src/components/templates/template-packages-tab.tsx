@@ -1,28 +1,8 @@
 import type { Package } from "@/generated/prisma/client";
+import { groupByManager, managerLabels } from "@/lib/utils/packages";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PackageOpen } from "lucide-react";
-
-/**
- * Group packages by their manager type.
- */
-function groupByManager(packages: Package[]): Record<string, Package[]> {
-  const grouped: Record<string, Package[]> = {};
-  for (const pkg of packages) {
-    const key = pkg.manager;
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(pkg);
-  }
-  return grouped;
-}
-
-/** Display label for package manager types */
-const managerLabels: Record<string, string> = {
-  apt: "APT",
-  npm: "NPM",
-  pip: "PIP",
-  custom: "Custom",
-};
 
 /**
  * TemplatePackagesTab — Displays packages grouped by manager type.
