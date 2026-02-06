@@ -20,6 +20,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "7.3.0",
     "@prisma/client": "7.3.0",
+    "@prisma/client-runtime-utils": "7.3.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
