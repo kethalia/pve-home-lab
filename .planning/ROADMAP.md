@@ -20,10 +20,11 @@ Plans:
 
 ---
 
-### Phase 02: Template System
+### Phase 02: Template System ✓
 
 **Goal:** Users can browse, view, create, and edit LXC templates with package bucket management
-**Status:** In progress (4/5 plans complete)
+**Status:** Complete
+**Completed:** 2026-02-06
 **Plans:** 5 plans
 
 Plans:
@@ -32,7 +33,7 @@ Plans:
 - [x] 02-02-PLAN.md — Template DatabaseService methods + browser page with search/filter
 - [x] 02-03-PLAN.md — Package bucket CRUD (DatabaseService + server actions + management UI)
 - [x] 02-04-PLAN.md — Template detail page with tabbed view (Config, Scripts, Packages, Files)
-- [ ] 02-05-PLAN.md — Template creator and editor forms (multi-section form with scripts/files/packages)
+- [x] 02-05-PLAN.md — Template creator and editor forms (multi-section form with scripts/files/packages)
 
 Issues: #76, #77, #78, #79
 
