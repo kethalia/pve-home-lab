@@ -81,16 +81,17 @@ export async function loginAction(
 
     return { success: true };
   } catch (error) {
-    console.error("[loginAction] Auth error:", error);
-
     // Don't leak Proxmox error details to the client
     if (error instanceof Error) {
-      const msg = error.message;
+      const msg =
+        error.message +
+        (error.cause instanceof Error ? " " + error.cause.message : "");
       if (
         msg.includes("fetch") ||
         msg.includes("ECONNREFUSED") ||
         msg.includes("ENOTFOUND") ||
         msg.includes("ETIMEDOUT") ||
+        msg.includes("EHOSTUNREACH") ||
         msg.includes("CERT") ||
         msg.includes("certificate") ||
         msg.includes("self-signed") ||
