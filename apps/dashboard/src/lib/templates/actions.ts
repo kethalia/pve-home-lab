@@ -11,6 +11,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 import { authActionClient } from "@/lib/safe-action";
 import { DatabaseService, prisma } from "@/lib/db";
@@ -270,17 +271,14 @@ export async function createTemplateAction(
     revalidatePath("/templates");
     redirect(`/templates/${template.id}`);
   } catch (error) {
-    // redirect() throws NEXT_REDIRECT — re-throw it
-    if (error instanceof Error && error.message === "NEXT_REDIRECT") {
+    // redirect() throws a special error — re-throw it
+    if (isRedirectError(error)) {
       throw error;
     }
     const message =
       error instanceof Error ? error.message : "Failed to create template";
     return { success: false, error: message };
   }
-
-  // Unreachable (redirect throws), but TypeScript needs it
-  return { success: true };
 }
 
 /**
@@ -363,14 +361,12 @@ export async function updateTemplateAction(
     revalidatePath(`/templates/${id}`);
     redirect(`/templates/${id}`);
   } catch (error) {
-    // redirect() throws NEXT_REDIRECT — re-throw it
-    if (error instanceof Error && error.message === "NEXT_REDIRECT") {
+    // redirect() throws a special error — re-throw it
+    if (isRedirectError(error)) {
       throw error;
     }
     const message =
       error instanceof Error ? error.message : "Failed to update template";
     return { success: false, error: message };
   }
-
-  return { success: true };
 }
