@@ -4,11 +4,11 @@
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
 **Phase:** 02-template-system — In progress
-**Plan:** 1 of 5 in current phase
-**Status:** Completed 02-01-PLAN.md
-**Last activity:** 2026-02-06 — Completed 02-01-PLAN.md
+**Plan:** 2 of 5 in current phase
+**Status:** Completed 02-02-PLAN.md
+**Last activity:** 2026-02-06 — Completed 02-02-PLAN.md
 
-Progress: ██░░░░░░░░ 20% (3/15 plans)
+Progress: ███░░░░░░░ 27% (4/15 plans)
 
 ## Completed Work
 
@@ -28,6 +28,13 @@ Progress: ██░░░░░░░░ 20% (3/15 plans)
 - Server actions: discoverTemplatesAction, getDiscoveryStatus
 - prisma instance exported from db.ts for complex operations
 
+**02-02 — Template browser page** ✓
+
+- DatabaseService template query methods (list, getById, getTags, count, delete)
+- /templates page with card grid, search, tag filtering, discovery button
+- TemplateCard, TemplateSearch, DiscoverButton components
+- Loading skeleton, empty state, no-results state
+
 ## Decisions Made
 
 - Tech stack locked: Next.js 15, shadcn/ui, Tailwind v4, Prisma, PostgreSQL, Redis, BullMQ
@@ -42,10 +49,13 @@ Progress: ██░░░░░░░░ 20% (3/15 plans)
 - Delete+recreate for child records (scripts/files/packages) ensures clean sync
 - Packages in PackageBucket with bucketId; templateId reserved for custom packages
 - Tags stored as semicolon-separated string matching template.conf format
+- Templates page under (dashboard) route group for sidebar layout inheritance
+- Server-side filtering via URL search params for shareability
+- Tag filtering uses AND logic (template must contain ALL selected tags)
 
 ## Pending Work
 
-- Phase 2: Plans 02-02 through 02-05 (template browser, package CRUD, detail page, editor)
+- Phase 2: Plans 02-03 through 02-05 (package CRUD, detail page, editor)
 - Phase 3: Container Creation (#80-82)
 - Phase 4: Container Management (#83-86)
 - Phase 5: Web UI & Monitoring (#87-88)
@@ -57,6 +67,6 @@ Progress: ██░░░░░░░░ 20% (3/15 plans)
 
 ## Session Continuity
 
-Last session: 2026-02-06T08:26:15Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-02-06T08:32:37Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
