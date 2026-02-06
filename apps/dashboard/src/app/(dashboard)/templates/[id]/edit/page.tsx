@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { DatabaseService } from "@/lib/db";
-import { updateTemplateAction } from "@/lib/templates/actions";
 import { TemplateForm } from "@/components/templates/template-form";
 
 export async function generateMetadata({
@@ -57,12 +56,7 @@ export default async function EditTemplatePage({
         </p>
       </div>
 
-      <TemplateForm
-        mode="edit"
-        template={template}
-        buckets={buckets}
-        action={updateTemplateAction}
-      />
+      <TemplateForm mode="edit" template={template} buckets={buckets} />
     </div>
   );
 }

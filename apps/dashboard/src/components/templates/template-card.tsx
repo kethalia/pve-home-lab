@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { TemplateWithCounts } from "@/lib/db";
 import { formatMemory, parseTags } from "@/lib/utils/format";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -25,9 +26,9 @@ export function TemplateCard({ template }: { template: TemplateWithCounts }) {
       <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer relative">
         {/* Source badge */}
         <div className="absolute top-3 right-4">
-          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <Badge variant="secondary" className="text-[10px]">
             {template.source}
-          </span>
+          </Badge>
         </div>
 
         <CardHeader className="pb-2">
@@ -44,12 +45,9 @@ export function TemplateCard({ template }: { template: TemplateWithCounts }) {
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
-                >
+                <Badge key={tag} variant="outline" className="text-xs">
                   {tag}
-                </span>
+                </Badge>
               ))}
             </div>
           )}

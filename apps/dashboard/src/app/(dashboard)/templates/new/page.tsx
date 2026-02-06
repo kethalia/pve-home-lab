@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { DatabaseService } from "@/lib/db";
-import { createTemplateAction } from "@/lib/templates/actions";
 import { TemplateForm } from "@/components/templates/template-form";
 
 export const metadata = {
@@ -30,11 +29,7 @@ export default async function CreateTemplatePage() {
         </p>
       </div>
 
-      <TemplateForm
-        mode="create"
-        buckets={buckets}
-        action={createTemplateAction}
-      />
+      <TemplateForm mode="create" buckets={buckets} />
     </div>
   );
 }

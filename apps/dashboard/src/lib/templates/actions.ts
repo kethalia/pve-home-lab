@@ -4,130 +4,22 @@
  * Template Server Actions
  *
  * Server actions for template discovery, status checking, and mutations.
- * Uses authActionClient for safe-action-based operations and standard
- * server actions with useActionState for form-based create/update flows.
+ * All actions use authActionClient (next-safe-action) for consistent
+ * auth handling, validation, and error responses.
  */
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
 import { authActionClient } from "@/lib/safe-action";
 import { DatabaseService, prisma } from "@/lib/db";
 import { idSchema } from "@/lib/packages/schemas";
-import { getSessionData } from "@/lib/session";
 
 import { discoverTemplates } from "./discovery";
+import { templateFormSchema, templateUpdateSchema } from "./schemas";
 
 // ============================================================================
-// Types
-// ============================================================================
-
-/** State returned by form-based server actions for useActionState */
-export type ActionState = {
-  success: boolean;
-  error?: string;
-};
-
-// ============================================================================
-// Zod Validation Schema
-// ============================================================================
-
-const scriptSchema = z.object({
-  name: z.string().min(1, "Script name is required"),
-  order: z.number().int().min(0),
-  content: z.string().min(1, "Script content is required"),
-  description: z.string().optional(),
-  enabled: z.boolean().default(true),
-});
-
-const fileSchema = z.object({
-  name: z.string().min(1, "File name is required"),
-  targetPath: z.string().min(1, "Target path is required"),
-  policy: z.enum(["replace", "default", "backup"]),
-  content: z.string().min(1, "File content is required"),
-});
-
-const templateFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(100, "Name must be 100 characters or less"),
-  description: z
-    .string()
-    .max(500, "Description must be 500 characters or less")
-    .optional()
-    .or(z.literal("")),
-  osTemplate: z.string().optional().or(z.literal("")),
-  cores: z.number().int().min(1).max(64).optional().nullable(),
-  memory: z.number().int().min(128).max(131072).optional().nullable(),
-  swap: z.number().int().min(0).max(131072).optional().nullable(),
-  diskSize: z.number().int().min(1).max(10000).optional().nullable(),
-  storage: z.string().optional().or(z.literal("")),
-  bridge: z.string().optional().or(z.literal("")),
-  unprivileged: z.boolean().default(true),
-  nesting: z.boolean().default(false),
-  keyctl: z.boolean().default(false),
-  fuse: z.boolean().default(false),
-  tags: z.string().optional().or(z.literal("")),
-  scripts: z.array(scriptSchema).optional().default([]),
-  files: z.array(fileSchema).optional().default([]),
-  bucketIds: z.array(z.string()).optional().default([]),
-});
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/** Parse formData into a structured object for Zod validation */
-function parseFormData(formData: FormData) {
-  const optionalInt = (key: string): number | null | undefined => {
-    const val = formData.get(key);
-    if (!val || val === "") return null;
-    const num = Number(val);
-    return isNaN(num) ? null : num;
-  };
-
-  const scriptsRaw = formData.get("scripts") as string;
-  const filesRaw = formData.get("files") as string;
-  const bucketIdsRaw = formData.get("bucketIds") as string;
-
-  let scripts: unknown[] = [];
-  let files: unknown[] = [];
-  let bucketIds: string[] = [];
-
-  // Let JSON.parse throw — Zod validation will catch structural issues,
-  // and parse errors surface as actionable feedback instead of silent data loss.
-  scripts = scriptsRaw ? JSON.parse(scriptsRaw) : [];
-  files = filesRaw ? JSON.parse(filesRaw) : [];
-
-  if (bucketIdsRaw) {
-    bucketIds = bucketIdsRaw.split(",").filter(Boolean);
-  }
-
-  return {
-    name: (formData.get("name") as string) || "",
-    description: (formData.get("description") as string) || "",
-    osTemplate: (formData.get("osTemplate") as string) || "",
-    cores: optionalInt("cores"),
-    memory: optionalInt("memory"),
-    swap: optionalInt("swap"),
-    diskSize: optionalInt("diskSize"),
-    storage: (formData.get("storage") as string) || "",
-    bridge: (formData.get("bridge") as string) || "",
-    unprivileged: formData.get("unprivileged") === "true",
-    nesting: formData.get("nesting") === "true",
-    keyctl: formData.get("keyctl") === "true",
-    fuse: formData.get("fuse") === "true",
-    tags: (formData.get("tags") as string) || "",
-    scripts,
-    files,
-    bucketIds,
-  };
-}
-
-// ============================================================================
-// Discovery Actions (safe-action based)
+// Discovery Actions
 // ============================================================================
 
 /**
@@ -181,181 +73,104 @@ export const deleteTemplateAction = authActionClient
   });
 
 // ============================================================================
-// Form-based Actions (for useActionState)
+// Template CRUD Actions (safe-action based)
 // ============================================================================
 
 /**
- * Create a new template from form data.
- *
- * Parses formData, validates with Zod, creates template atomically,
- * and redirects to the new template's detail page on success.
+ * Helper to map validated form data to DatabaseService input shape.
  */
-export async function createTemplateAction(
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  // Auth check
-  const session = await getSessionData();
-  if (!session) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  // Parse and validate
-  const raw = parseFormData(formData);
-  const parsed = templateFormSchema.safeParse(raw);
-
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Validation failed",
-    };
-  }
-
-  const {
-    name,
-    description,
-    osTemplate,
-    cores,
-    memory,
-    swap,
-    diskSize,
-    storage,
-    bridge,
-    unprivileged,
-    nesting,
-    keyctl,
-    fuse,
-    tags,
-    scripts,
-    files,
-    bucketIds,
-  } = parsed.data;
-
-  let templateId: string;
-  try {
-    const template = await DatabaseService.createTemplate({
-      name,
-      description: description || undefined,
-      osTemplate: osTemplate || undefined,
-      cores: cores ?? undefined,
-      memory: memory ?? undefined,
-      swap: swap ?? undefined,
-      diskSize: diskSize ?? undefined,
-      storage: storage || undefined,
-      bridge: bridge || undefined,
-      unprivileged,
-      nesting,
-      keyctl,
-      fuse,
-      tags: tags || undefined,
-      scripts: scripts.length > 0 ? scripts : undefined,
-      files:
-        files.length > 0
-          ? files.map((f) => ({
-              ...f,
-              policy: f.policy as "replace" | "default" | "backup",
-            }))
-          : undefined,
-      bucketIds: bucketIds.length > 0 ? bucketIds : undefined,
-    });
-    templateId = template.id;
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to create template";
-    return { success: false, error: message };
-  }
-
-  revalidatePath("/templates");
-  redirect(`/templates/${templateId}`);
+function toDbInput(data: {
+  name: string;
+  description?: string;
+  osTemplate?: string;
+  cores?: number | null;
+  memory?: number | null;
+  swap?: number | null;
+  diskSize?: number | null;
+  storage?: string;
+  bridge?: string;
+  unprivileged: boolean;
+  nesting: boolean;
+  keyctl: boolean;
+  fuse: boolean;
+  tags?: string;
+  scripts: {
+    name: string;
+    order: number;
+    content: string;
+    description?: string;
+    enabled: boolean;
+  }[];
+  files: {
+    name: string;
+    targetPath: string;
+    policy: string;
+    content: string;
+  }[];
+  bucketIds: string[];
+}) {
+  return {
+    name: data.name,
+    description: data.description || undefined,
+    osTemplate: data.osTemplate || undefined,
+    cores: data.cores ?? undefined,
+    memory: data.memory ?? undefined,
+    swap: data.swap ?? undefined,
+    diskSize: data.diskSize ?? undefined,
+    storage: data.storage || undefined,
+    bridge: data.bridge || undefined,
+    unprivileged: data.unprivileged,
+    nesting: data.nesting,
+    keyctl: data.keyctl,
+    fuse: data.fuse,
+    tags: data.tags || undefined,
+    scripts: data.scripts.length > 0 ? data.scripts : undefined,
+    files:
+      data.files.length > 0
+        ? data.files.map((f) => ({
+            ...f,
+            policy: f.policy as "replace" | "default" | "backup",
+          }))
+        : undefined,
+    bucketIds: data.bucketIds.length > 0 ? data.bucketIds : undefined,
+  };
 }
 
 /**
- * Update an existing template from form data.
+ * Create a new template.
  *
- * Parses formData, validates with Zod, updates template and all
- * associated data atomically, and redirects to the detail page.
+ * Validates with Zod, creates template atomically via DatabaseService,
+ * and returns the new template ID for client-side redirect.
  */
-export async function updateTemplateAction(
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  // Auth check
-  const session = await getSessionData();
-  if (!session) {
-    return { success: false, error: "Unauthorized" };
-  }
+export const createTemplateAction = authActionClient
+  .schema(templateFormSchema)
+  .action(async ({ parsedInput }) => {
+    const template = await DatabaseService.createTemplate(
+      toDbInput(parsedInput),
+    );
+    revalidatePath("/templates");
+    return { templateId: template.id };
+  });
 
-  const rawId = formData.get("id") as string;
-  const idParsed = idSchema.safeParse({ id: rawId });
-  if (!idParsed.success) {
-    return {
-      success: false,
-      error: idParsed.error.issues[0]?.message ?? "Invalid template ID",
-    };
-  }
-  const { id } = idParsed.data;
-
-  // Parse and validate
-  const raw = parseFormData(formData);
-  const parsed = templateFormSchema.safeParse(raw);
-
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Validation failed",
-    };
-  }
-
-  const {
-    name,
-    description,
-    osTemplate,
-    cores,
-    memory,
-    swap,
-    diskSize,
-    storage,
-    bridge,
-    unprivileged,
-    nesting,
-    keyctl,
-    fuse,
-    tags,
-    scripts,
-    files,
-    bucketIds,
-  } = parsed.data;
-
-  try {
+/**
+ * Update an existing template.
+ *
+ * Validates with Zod (including ID), updates template and all
+ * associated data atomically, and returns the template ID.
+ */
+export const updateTemplateAction = authActionClient
+  .schema(templateUpdateSchema)
+  .action(async ({ parsedInput: { id, ...data } }) => {
     await DatabaseService.updateTemplate(id, {
-      name,
-      description: description || undefined,
-      osTemplate: osTemplate || undefined,
-      cores: cores ?? undefined,
-      memory: memory ?? undefined,
-      swap: swap ?? undefined,
-      diskSize: diskSize ?? undefined,
-      storage: storage || undefined,
-      bridge: bridge || undefined,
-      unprivileged,
-      nesting,
-      keyctl,
-      fuse,
-      tags: tags || undefined,
-      scripts: scripts,
-      files: files.map((f) => ({
+      ...toDbInput(data),
+      scripts: data.scripts,
+      files: data.files.map((f) => ({
         ...f,
         policy: f.policy as "replace" | "default" | "backup",
       })),
-      bucketIds,
+      bucketIds: data.bucketIds,
     });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to update template";
-    return { success: false, error: message };
-  }
-
-  revalidatePath("/templates");
-  revalidatePath(`/templates/${id}`);
-  redirect(`/templates/${id}`);
-}
+    revalidatePath("/templates");
+    revalidatePath(`/templates/${id}`);
+    return { templateId: id };
+  });

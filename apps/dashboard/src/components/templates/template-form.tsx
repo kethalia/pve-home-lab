@@ -4,23 +4,45 @@
  * Template Form — Shared multi-section form for template create and edit.
  *
  * Sections: Basics, Resources, Features, Scripts, Packages, Files.
- * Uses useActionState for form submission with server actions.
- * Complex fields (scripts, files, bucketIds) are serialized as hidden JSON fields.
+ * Uses react-hook-form + shadcn Form for validation and field management.
+ * Complex fields (scripts, files) are managed as controlled sub-components
+ * with values synced into react-hook-form state.
  */
 
-import { useActionState, useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAction } from "next-safe-action/hooks";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 import type { TemplateWithDetails, BucketWithPackages } from "@/lib/db";
-import type { ActionState } from "@/lib/templates/actions";
+import {
+  templateFormSchema,
+  type TemplateFormValues,
+  type TemplateFormInput,
+} from "@/lib/templates/schemas";
+import {
+  createTemplateAction,
+  updateTemplateAction,
+} from "@/lib/templates/actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -47,24 +69,105 @@ interface TemplateFormProps {
   mode: "create" | "edit";
   template?: TemplateWithDetails;
   buckets: BucketWithPackages[];
-  action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
 }
 
 // ============================================================================
 // Component
 // ============================================================================
 
-export function TemplateForm({
-  mode,
-  template,
-  buckets,
-  action,
-}: TemplateFormProps) {
-  const [state, formAction, isPending] = useActionState(action, {
-    success: false,
+export function TemplateForm({ mode, template, buckets }: TemplateFormProps) {
+  const router = useRouter();
+
+  // ----- Form setup with react-hook-form + Zod -----
+
+  const form = useForm<TemplateFormInput, unknown, TemplateFormValues>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues: {
+      name: template?.name ?? "",
+      description: template?.description ?? "",
+      osTemplate: template?.osTemplate ?? "",
+      cores: template?.cores ?? null,
+      memory: template?.memory ?? null,
+      swap: template?.swap ?? null,
+      diskSize: template?.diskSize ?? null,
+      storage: template?.storage ?? "",
+      bridge: template?.bridge ?? "",
+      unprivileged: template?.unprivileged ?? true,
+      nesting: template?.nesting ?? false,
+      keyctl: template?.keyctl ?? false,
+      fuse: template?.fuse ?? false,
+      tags: template?.tags ?? "",
+      scripts:
+        template?.scripts.map((s) => ({
+          name: s.name,
+          order: s.order,
+          content: s.content,
+          description: s.description ?? "",
+          enabled: s.enabled,
+        })) ?? [],
+      files:
+        template?.files.map((f) => ({
+          name: f.name,
+          targetPath: f.targetPath,
+          policy: f.policy as "replace" | "default" | "backup",
+          content: f.content,
+        })) ?? [],
+      bucketIds: (() => {
+        if (!template) return [];
+        const templatePkgKeys = new Set(
+          template.packages.map(
+            (p) => `${p.manager}:${p.name}:${p.version ?? ""}`,
+          ),
+        );
+        return buckets
+          .filter((b) =>
+            b.packages.some((p) =>
+              templatePkgKeys.has(`${p.manager}:${p.name}:${p.version ?? ""}`),
+            ),
+          )
+          .map((b) => b.id);
+      })(),
+    },
   });
 
-  // ----- Complex state (scripts, files, selected buckets) -----
+  // ----- Safe actions for create/update -----
+
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const { execute: executeCreate, isPending: isCreating } = useAction(
+    createTemplateAction,
+    {
+      onSuccess: ({ data }) => {
+        if (data?.templateId) {
+          router.push(`/templates/${data.templateId}`);
+        }
+      },
+      onError: ({ error }) => {
+        setServerError(error.serverError ?? "An error occurred");
+      },
+    },
+  );
+
+  const { execute: executeUpdate, isPending: isUpdating } = useAction(
+    updateTemplateAction,
+    {
+      onSuccess: ({ data }) => {
+        if (data?.templateId) {
+          router.push(`/templates/${data.templateId}`);
+        }
+      },
+      onError: ({ error }) => {
+        setServerError(error.serverError ?? "An error occurred");
+      },
+    },
+  );
+
+  const isPending = isCreating || isUpdating;
+
+  // ----- Complex sub-editor state (scripts, files) -----
+  // ScriptEditor/FileEditor use _key for React keys, which isn't part
+  // of the Zod schema. We manage them as local state and sync values
+  // into react-hook-form on change.
 
   const [scripts, setScripts] = useState<ScriptInput[]>(
     template?.scripts.map((s) =>
@@ -89,380 +192,492 @@ export function TemplateForm({
     ) ?? [],
   );
 
-  // Determine which buckets are "selected" for edit mode by checking
-  // if the template's packages overlap with bucket packages
-  const [selectedBucketIds, setSelectedBucketIds] = useState<string[]>(() => {
-    if (!template) return [];
-    const templatePkgKeys = new Set(
-      template.packages.map((p) => `${p.manager}:${p.name}:${p.version ?? ""}`),
+  // Sync scripts/files into react-hook-form whenever they change
+  useEffect(() => {
+    form.setValue(
+      "scripts",
+      scripts.map(({ _key, ...s }) => s),
     );
-    return buckets
-      .filter((b) =>
-        b.packages.some((p) =>
-          templatePkgKeys.has(`${p.manager}:${p.name}:${p.version ?? ""}`),
-        ),
-      )
-      .map((b) => b.id);
-  });
+  }, [scripts, form]);
 
-  // ----- Feature toggles -----
-
-  const [unprivileged, setUnprivileged] = useState(
-    template?.unprivileged ?? true,
-  );
-  const [nesting, setNesting] = useState(template?.nesting ?? false);
-  const [keyctl, setKeyctl] = useState(template?.keyctl ?? false);
-  const [fuse, setFuse] = useState(template?.fuse ?? false);
+  useEffect(() => {
+    form.setValue(
+      "files",
+      files.map(({ _key, ...f }) => f),
+    );
+  }, [files, form]);
 
   // ----- Helpers -----
 
+  const selectedBucketIds = form.watch("bucketIds") ?? [];
+
   const toggleBucket = (bucketId: string) => {
-    setSelectedBucketIds((prev) =>
-      prev.includes(bucketId)
-        ? prev.filter((id) => id !== bucketId)
-        : [...prev, bucketId],
-    );
+    const current = form.getValues("bucketIds") ?? [];
+    const next = current.includes(bucketId)
+      ? current.filter((id) => id !== bucketId)
+      : [...current, bucketId];
+    form.setValue("bucketIds", next);
   };
 
-  // Collect all packages from selected buckets for preview
   const selectedPackages = buckets
     .filter((b) => selectedBucketIds.includes(b.id))
     .flatMap((b) => b.packages);
 
+  // ----- Submit handler -----
+
+  function onSubmit(values: TemplateFormValues) {
+    setServerError(null);
+    if (mode === "create") {
+      executeCreate(values);
+    } else if (template) {
+      executeUpdate({ id: template.id, ...values });
+    }
+  }
+
   return (
-    <form action={formAction} className="space-y-6">
-      {/* Hidden fields for complex data serialization */}
-      <input type="hidden" name="scripts" value={JSON.stringify(scripts)} />
-      <input type="hidden" name="files" value={JSON.stringify(files)} />
-      <input
-        type="hidden"
-        name="bucketIds"
-        value={selectedBucketIds.join(",")}
-      />
-      <input type="hidden" name="unprivileged" value={String(unprivileged)} />
-      <input type="hidden" name="nesting" value={String(nesting)} />
-      <input type="hidden" name="keyctl" value={String(keyctl)} />
-      <input type="hidden" name="fuse" value={String(fuse)} />
-      {mode === "edit" && template && (
-        <input type="hidden" name="id" value={template.id} />
-      )}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Server error display */}
+        {serverError && (
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
+        )}
 
-      {/* Error display */}
-      {state.error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {state.error}
-        </div>
-      )}
-
-      {/* ================================================================== */}
-      {/* Section 1: Basics */}
-      {/* ================================================================== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basics</CardTitle>
-          <CardDescription>
-            Template name, description, and categorization
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="name"
+        {/* ================================================================ */}
+        {/* Section 1: Basics */}
+        {/* ================================================================ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basics</CardTitle>
+            <CardDescription>
+              Template name, description, and categorization
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
               name="name"
-              required
-              maxLength={100}
-              defaultValue={template?.name ?? ""}
-              placeholder="e.g., Docker Development Server"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Name <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      maxLength={100}
+                      placeholder="e.g., Docker Development Server"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
+            <FormField
+              control={form.control}
               name="description"
-              maxLength={500}
-              defaultValue={template?.description ?? ""}
-              placeholder="What this template sets up..."
-              rows={3}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      maxLength={500}
+                      placeholder="What this template sets up..."
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="tags">Tags</Label>
-              <Input
-                id="tags"
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
                 name="tags"
-                defaultValue={template?.tags ?? ""}
-                placeholder="docker;development;web (semicolon-separated)"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="docker;development;web (semicolon-separated)"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="osTemplate">OS Template</Label>
-              <Input
-                id="osTemplate"
+              <FormField
+                control={form.control}
                 name="osTemplate"
-                defaultValue={template?.osTemplate ?? ""}
-                placeholder="e.g., debian-12-standard"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>OS Template</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., debian-12-standard"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* ================================================================== */}
-      {/* Section 2: Resources */}
-      {/* ================================================================== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resources</CardTitle>
-          <CardDescription>
-            CPU, memory, disk, and network configuration
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="cores">CPU Cores</Label>
-              <Input
-                id="cores"
+        {/* ================================================================ */}
+        {/* Section 2: Resources */}
+        {/* ================================================================ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Resources</CardTitle>
+            <CardDescription>
+              CPU, memory, disk, and network configuration
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField
+                control={form.control}
                 name="cores"
-                type="number"
-                min={1}
-                max={64}
-                defaultValue={template?.cores ?? ""}
-                placeholder="4"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CPU Cores</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={64}
+                        placeholder="4"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? null
+                              : parseInt(e.target.value),
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="memory">Memory (MB)</Label>
-              <Input
-                id="memory"
+              <FormField
+                control={form.control}
                 name="memory"
-                type="number"
-                min={128}
-                max={131072}
-                defaultValue={template?.memory ?? ""}
-                placeholder="8192"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Memory (MB)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={128}
+                        max={131072}
+                        placeholder="8192"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? null
+                              : parseInt(e.target.value),
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="swap">Swap (MB)</Label>
-              <Input
-                id="swap"
+              <FormField
+                control={form.control}
                 name="swap"
-                type="number"
-                min={0}
-                max={131072}
-                defaultValue={template?.swap ?? ""}
-                placeholder="0"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Swap (MB)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={131072}
+                        placeholder="0"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? null
+                              : parseInt(e.target.value),
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="diskSize">Disk Size (GB)</Label>
-              <Input
-                id="diskSize"
+              <FormField
+                control={form.control}
                 name="diskSize"
-                type="number"
-                min={1}
-                max={10000}
-                defaultValue={template?.diskSize ?? ""}
-                placeholder="20"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Disk Size (GB)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10000}
+                        placeholder="20"
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? null
+                              : parseInt(e.target.value),
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="storage">Storage</Label>
-              <Input
-                id="storage"
+              <FormField
+                control={form.control}
                 name="storage"
-                defaultValue={template?.storage ?? ""}
-                placeholder="local-lvm"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Storage</FormLabel>
+                    <FormControl>
+                      <Input placeholder="local-lvm" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bridge">Bridge</Label>
-              <Input
-                id="bridge"
+              <FormField
+                control={form.control}
                 name="bridge"
-                defaultValue={template?.bridge ?? ""}
-                placeholder="vmbr0"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bridge</FormLabel>
+                    <FormControl>
+                      <Input placeholder="vmbr0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* ================================================================== */}
-      {/* Section 3: Features */}
-      {/* ================================================================== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Features</CardTitle>
-          <CardDescription>
-            Container security and capability flags
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-6">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="unprivileged"
-                checked={unprivileged}
-                onCheckedChange={setUnprivileged}
+        {/* ================================================================ */}
+        {/* Section 3: Features */}
+        {/* ================================================================ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Features</CardTitle>
+            <CardDescription>
+              Container security and capability flags
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-6">
+              <FormField
+                control={form.control}
+                name="unprivileged"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Unprivileged</FormLabel>
+                  </FormItem>
+                )}
               />
-              <Label htmlFor="unprivileged">Unprivileged</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="nesting"
-                checked={nesting}
-                onCheckedChange={setNesting}
+              <FormField
+                control={form.control}
+                name="nesting"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Nesting</FormLabel>
+                  </FormItem>
+                )}
               />
-              <Label htmlFor="nesting">Nesting</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                id="keyctl"
-                checked={keyctl}
-                onCheckedChange={setKeyctl}
+              <FormField
+                control={form.control}
+                name="keyctl"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Keyctl</FormLabel>
+                  </FormItem>
+                )}
               />
-              <Label htmlFor="keyctl">Keyctl</Label>
+              <FormField
+                control={form.control}
+                name="fuse"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>FUSE</FormLabel>
+                  </FormItem>
+                )}
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <Switch id="fuse" checked={fuse} onCheckedChange={setFuse} />
-              <Label htmlFor="fuse">FUSE</Label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* ================================================================== */}
-      {/* Section 4: Scripts */}
-      {/* ================================================================== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Scripts</CardTitle>
-          <CardDescription>
-            Setup scripts that run during container provisioning (in order)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScriptEditor scripts={scripts} onChange={setScripts} />
-        </CardContent>
-      </Card>
+        {/* ================================================================ */}
+        {/* Section 4: Scripts */}
+        {/* ================================================================ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Scripts</CardTitle>
+            <CardDescription>
+              Setup scripts that run during container provisioning (in order)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScriptEditor scripts={scripts} onChange={setScripts} />
+          </CardContent>
+        </Card>
 
-      {/* ================================================================== */}
-      {/* Section 5: Packages */}
-      {/* ================================================================== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Packages</CardTitle>
-          <CardDescription>
-            Select package buckets to include in this template
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {buckets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No package buckets available.{" "}
-              <Link
-                href="/templates/packages"
-                className="text-primary underline underline-offset-4 hover:text-primary/80"
-              >
-                Create one first
-              </Link>
-              .
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {buckets.map((bucket) => (
-                <div
-                  key={bucket.id}
-                  className="flex items-start gap-3 rounded-lg border p-3"
+        {/* ================================================================ */}
+        {/* Section 5: Packages */}
+        {/* ================================================================ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Packages</CardTitle>
+            <CardDescription>
+              Select package buckets to include in this template
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {buckets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No package buckets available.{" "}
+                <Link
+                  href="/templates/packages"
+                  className="text-primary underline underline-offset-4 hover:text-primary/80"
                 >
-                  <Checkbox
-                    id={`bucket-${bucket.id}`}
-                    checked={selectedBucketIds.includes(bucket.id)}
-                    onCheckedChange={() => toggleBucket(bucket.id)}
-                    className="mt-0.5"
-                  />
-                  <div className="flex-1 space-y-1">
-                    <Label
-                      htmlFor={`bucket-${bucket.id}`}
-                      className="cursor-pointer font-medium"
-                    >
-                      {bucket.name}
-                    </Label>
-                    {bucket.description && (
+                  Create one first
+                </Link>
+                .
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {buckets.map((bucket) => (
+                  <div
+                    key={bucket.id}
+                    className="flex items-start gap-3 rounded-lg border p-3"
+                  >
+                    <Checkbox
+                      id={`bucket-${bucket.id}`}
+                      checked={selectedBucketIds.includes(bucket.id)}
+                      onCheckedChange={() => toggleBucket(bucket.id)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 space-y-1">
+                      <Label
+                        htmlFor={`bucket-${bucket.id}`}
+                        className="cursor-pointer font-medium"
+                      >
+                        {bucket.name}
+                      </Label>
+                      {bucket.description && (
+                        <p className="text-xs text-muted-foreground">
+                          {bucket.description}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">
-                        {bucket.description}
+                        {bucket.packages.length} package
+                        {bucket.packages.length !== 1 ? "s" : ""}
                       </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {bucket.packages.length} package
-                      {bucket.packages.length !== 1 ? "s" : ""}
-                    </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Package preview */}
-          {selectedPackages.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">
-                Packages to be included ({selectedPackages.length})
-              </Label>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedPackages.map((pkg) => (
-                  <Badge key={pkg.id} variant="secondary" className="text-xs">
-                    {pkg.name}
-                  </Badge>
                 ))}
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
 
-      {/* ================================================================== */}
-      {/* Section 6: Files */}
-      {/* ================================================================== */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Config Files</CardTitle>
-          <CardDescription>
-            Configuration files deployed to the container at target paths
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileEditor files={files} onChange={setFiles} />
-        </CardContent>
-      </Card>
+            {/* Package preview */}
+            {selectedPackages.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Packages to be included ({selectedPackages.length})
+                </Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedPackages.map((pkg) => (
+                    <Badge key={pkg.id} variant="secondary" className="text-xs">
+                      {pkg.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* ================================================================== */}
-      {/* Form Footer */}
-      {/* ================================================================== */}
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="outline" asChild>
-          <Link href="/templates">Cancel</Link>
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending && <Loader2 className="size-4 animate-spin" />}
-          {isPending
-            ? mode === "create"
-              ? "Creating..."
-              : "Saving..."
-            : mode === "create"
-              ? "Create Template"
-              : "Save Changes"}
-        </Button>
-      </div>
-    </form>
+        {/* ================================================================ */}
+        {/* Section 6: Files */}
+        {/* ================================================================ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Config Files</CardTitle>
+            <CardDescription>
+              Configuration files deployed to the container at target paths
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FileEditor files={files} onChange={setFiles} />
+          </CardContent>
+        </Card>
+
+        {/* ================================================================ */}
+        {/* Form Footer */}
+        {/* ================================================================ */}
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="outline" asChild>
+            <Link href="/templates">Cancel</Link>
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending && <Loader2 className="size-4 animate-spin" />}
+            {isPending
+              ? mode === "create"
+                ? "Creating..."
+                : "Saving..."
+              : mode === "create"
+                ? "Create Template"
+                : "Save Changes"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
