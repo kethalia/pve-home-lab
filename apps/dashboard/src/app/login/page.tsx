@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useFormStatus } from "react-dom";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { loginAction, type ActionState } from "@/lib/auth/actions";
+import { useAction } from "next-safe-action/hooks";
+import { loginAction } from "@/lib/auth/actions";
 import {
   Card,
   CardHeader,
@@ -14,27 +14,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const initialState: ActionState = { success: false };
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? "Signing in..." : "Sign in"}
-    </Button>
-  );
-}
-
 export default function LoginPage() {
-  const [state, formAction] = useActionState(loginAction, initialState);
   const router = useRouter();
+  const { execute, result, isPending } = useAction(loginAction);
 
   useEffect(() => {
-    if (state.success) {
+    if (result.data?.success) {
       router.push("/");
     }
-  }, [state.success, router]);
+  }, [result.data?.success, router]);
+
+  const error =
+    result.serverError ||
+    result.validationErrors?.username?._errors?.[0] ||
+    result.validationErrors?.password?._errors?.[0] ||
+    result.validationErrors?.realm?._errors?.[0];
+
+  function handleSubmit(formData: FormData) {
+    execute({
+      username: formData.get("username") as string,
+      password: formData.get("password") as string,
+      realm: formData.get("realm") as "pam" | "pve",
+    });
+  }
 
   return (
     <Card className="w-full max-w-md">
@@ -45,7 +47,7 @@ export default function LoginPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="flex flex-col gap-4">
+        <form action={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label htmlFor="username" className="text-sm font-medium">
               Username
@@ -81,11 +83,11 @@ export default function LoginPage() {
             <Input id="password" name="password" type="password" required />
           </div>
 
-          {state.error && (
-            <p className="text-sm text-destructive">{state.error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <SubmitButton />
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Signing in..." : "Sign in"}
+          </Button>
         </form>
       </CardContent>
     </Card>

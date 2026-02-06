@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, FileCode, Box, Settings, LogOut } from "lucide-react";
+import { useAction } from "next-safe-action/hooks";
 import { logoutAction } from "@/lib/auth/actions";
 
 import {
@@ -44,6 +45,7 @@ const navItems = [
 
 export function AppSidebar({ username }: { username?: string }) {
   const pathname = usePathname();
+  const { execute: logout } = useAction(logoutAction);
 
   return (
     <Sidebar collapsible="icon">
@@ -98,16 +100,14 @@ export function AppSidebar({ username }: { username?: string }) {
                 {username}
               </div>
             )}
-            <form action={logoutAction}>
-              <SidebarMenuButton
-                tooltip="Sign out"
-                type="submit"
-                className="w-full"
-              >
-                <LogOut />
-                <span>Sign out</span>
-              </SidebarMenuButton>
-            </form>
+            <SidebarMenuButton
+              tooltip="Sign out"
+              className="w-full"
+              onClick={() => logout()}
+            >
+              <LogOut />
+              <span>Sign out</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
