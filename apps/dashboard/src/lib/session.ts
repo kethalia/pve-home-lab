@@ -38,23 +38,25 @@ export interface RedisSessionData {
 // Session Configuration
 // ============================================================================
 
-const SESSION_SECRET = process.env.SESSION_SECRET;
+function getSessionOptions(): SessionOptions {
+  const secret = process.env.SESSION_SECRET;
 
-if (!SESSION_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error(
-    "SESSION_SECRET environment variable is required in production. Must be at least 32 characters.",
-  );
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET environment variable is required in production. Must be at least 32 characters.",
+    );
+  }
+
+  return {
+    cookieName: "lxc-session",
+    password: secret || "development-secret-must-be-at-least-32-chars!",
+    cookieOptions: {
+      httpOnly: true,
+      sameSite: "strict" as const,
+      secure: process.env.NODE_ENV === "production",
+    },
+  };
 }
-
-export const sessionOptions: SessionOptions = {
-  cookieName: "lxc-session",
-  password: SESSION_SECRET || "development-secret-must-be-at-least-32-chars!",
-  cookieOptions: {
-    httpOnly: true,
-    sameSite: "strict" as const,
-    secure: process.env.NODE_ENV === "production",
-  },
-};
 
 /** Redis key prefix for sessions */
 const SESSION_PREFIX = "session:";
@@ -72,7 +74,7 @@ const SESSION_TTL = 7200;
  */
 export async function getSession(): Promise<IronSession<SessionData>> {
   const cookieStore = await cookies();
-  return getIronSession<SessionData>(cookieStore, sessionOptions);
+  return getIronSession<SessionData>(cookieStore, getSessionOptions());
 }
 
 /**
