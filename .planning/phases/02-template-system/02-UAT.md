@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-template-system
-source: 02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md
+source: 02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md, 02-04-SUMMARY.md, 02-05-SUMMARY.md
 started: 2026-02-06T21:00:00Z
-updated: 2026-02-06T21:45:00Z
+updated: 2026-02-06T15:10:00Z
 ---
 
 ## Current Test
@@ -82,14 +82,113 @@ result: pass
 expected: Click Delete on a bucket. A styled shadcn AlertDialog appears showing the bucket name and package count. Clicking Delete removes the bucket and all its packages. A toast confirms deletion.
 result: pass
 
+### 15. Template detail page loads with tabs
+
+expected: Click on any template card from /templates. The /templates/[id] page loads showing a "Back to Templates" link, the template name as heading, description, source badge, and tags. Below, a tabbed interface with Config, Scripts, Packages, and Files tabs. Config tab is active by default.
+result: issue
+reported: "Runtime Error: Cookies can only be modified in a Server Action or Route Handler. Crashes at getSessionData() in (dashboard)/layout.tsx:15 — session.destroy() at session.ts:99 tries to write a cookie inside a layout RSC. Next.js 16.1.6. This blocks ALL dashboard routes."
+severity: blocker
+
+### 16. Config tab shows resources and features
+
+expected: On the Config tab, resource settings display in a grid: CPU cores, Memory (MB), Swap, Disk (GB), Storage target, Network bridge. Below, feature flags show as Enabled/Disabled badges: Unprivileged, Nesting, Keyctl, FUSE.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 17. Scripts tab with collapsible content
+
+expected: Click the "Scripts" tab. Shows a list of scripts in execution order, each with an order badge, name, and enabled/disabled indicator. Clicking a script expands it to reveal the script content in a monospace code block. Clicking again collapses it.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 18. Packages tab grouped by manager
+
+expected: Click the "Packages" tab. Packages are grouped by manager type (e.g., "APT Packages (N)"). Each package shows as a badge. If no packages exist, shows an empty state message.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 19. Files tab with policy badges
+
+expected: Click the "Files" tab. Config files are listed with name, target path (monospace), and a color-coded policy badge (replace/default/backup). Clicking expands to show file content in a code block.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 20. Tab switching without page reload
+
+expected: Switching between Config, Scripts, Packages, and Files tabs is instant — no page reload, no loading spinner. The URL does not change. Tab counts show in the tab labels (e.g., "Scripts (11)").
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 21. Edit button links to edit page
+
+expected: On the template detail page, there's an "Edit Template" button. Clicking it navigates to /templates/[id]/edit.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 22. Create template page loads
+
+expected: Visit http://localhost:3001/templates/new (or click "Create Template" from /templates). A multi-section form loads with: Basics (name, description, tags, OS template), Resources (CPU, memory, swap, disk, storage, bridge), Features (switches for unprivileged, nesting, keyctl, FUSE), Scripts section, Packages section, and Files section.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 23. Script editor add and remove
+
+expected: In the Scripts section of the form, click "Add Script". An entry appears with Order, Name, Description, Content (textarea), and an Enabled toggle. Adding multiple scripts and changing order numbers reorders them. The X button removes a script.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 24. File editor add and remove
+
+expected: In the Files section, click "Add File". An entry appears with Name, Target Path, Policy dropdown (replace/default/backup), and Content textarea. Adding multiple files works. The X button removes a file.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 25. Package bucket selection
+
+expected: In the Packages section, available buckets appear as checkboxes with name and package count. Checking a bucket shows its packages as a preview (read-only badges).
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 26. Create template submission
+
+expected: Fill in at least the Name field and submit the form. The template is created and you're redirected to its detail page at /templates/[id] showing the data you entered.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 27. Edit template pre-populated
+
+expected: Navigate to an existing template's detail page and click "Edit Template". The edit form loads with all fields pre-populated from the existing template data — basics, resources, features, scripts, packages, and files.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
+### 28. Edit template save
+
+expected: Change a field (e.g., description or a resource value) and submit. You're redirected back to the detail page showing the updated value.
+result: skipped
+reason: Blocked by Test 15 — layout crash prevents all dashboard pages
+
 ## Summary
 
-total: 14
+total: 28
 passed: 14
-issues: 0
+issues: 1
 pending: 0
-skipped: 0
+skipped: 13
 
 ## Gaps
 
-[none]
+- truth: "Template detail page loads with tabbed interface at /templates/[id]"
+  status: failed
+  reason: "User reported: Runtime Error — Cookies can only be modified in a Server Action or Route Handler. session.destroy() in getSessionData() called from (dashboard)/layout.tsx. Next.js 16.1.6."
+  severity: blocker
+  test: 15
+  root_cause: "getSessionData() in session.ts calls session.destroy() (lines 99, 111) which modifies cookies. Next.js 16 forbids cookie writes in Server Components — only Server Actions and Route Handlers may modify cookies. The layout RSC calls getSessionData() to read session for sidebar username."
+  artifacts:
+  - path: "apps/dashboard/src/lib/session.ts"
+    issue: "session.destroy() on lines 99 and 111 modifies cookies inside a function called from RSC layout"
+  - path: "apps/dashboard/src/app/(dashboard)/layout.tsx"
+    issue: "Calls getSessionData() which triggers cookie write via session.destroy()"
+    missing:
+  - "Remove session.destroy() calls from getSessionData() — return null for expired/missing sessions without cookie cleanup"
+  - "Cookie cleanup should happen in middleware or a Server Action (e.g., logout), not in read-path"
+    debug_session: ""
