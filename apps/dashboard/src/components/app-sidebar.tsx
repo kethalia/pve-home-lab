@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileCode, Box, Settings, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileCode,
+  Package2,
+  Box,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { logoutAction } from "@/lib/auth/actions";
 
@@ -30,6 +37,11 @@ const navItems = [
     title: "Templates",
     href: "/templates",
     icon: FileCode,
+  },
+  {
+    title: "Packages",
+    href: "/templates/packages",
+    icon: Package2,
   },
   {
     title: "Containers",
