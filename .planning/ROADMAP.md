@@ -59,11 +59,14 @@ Issues: #80, #81, #82
 
 **Goal:** Users can monitor and control container lifecycle with a dashboard overview
 **Status:** Not started
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
 
-- [ ] TBD — dashboard, lifecycle controls, service monitoring, detail page
+- [ ] 04-01-PLAN.md — Lifecycle server actions (start/stop/shutdown/restart/delete) + DB query methods + client helper
+- [ ] 04-02-PLAN.md — Service monitoring engine (SSH-based service/port/credential checks)
+- [ ] 04-03-PLAN.md — Container dashboard page (summary bar, container cards, filters, auto-refresh)
+- [ ] 04-04-PLAN.md — Container detail page (/containers/[id] with Overview, Services, Events tabs)
 
 Issues: #83, #84, #85, #86
 
