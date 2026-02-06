@@ -192,18 +192,19 @@ export function TemplateForm({ mode, template, buckets }: TemplateFormProps) {
     ) ?? [],
   );
 
-  // Sync scripts/files into react-hook-form whenever they change
+  // Sync scripts/files into react-hook-form whenever they change.
+  // Strip _key (React key only) before setting form values.
   useEffect(() => {
     form.setValue(
       "scripts",
-      scripts.map(({ _key, ...s }) => s),
+      scripts.map(({ _key: _, ...s }) => s),
     );
   }, [scripts, form]);
 
   useEffect(() => {
     form.setValue(
       "files",
-      files.map(({ _key, ...f }) => f),
+      files.map(({ _key: _, ...f }) => f),
     );
   }, [files, form]);
 
