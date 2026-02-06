@@ -49,6 +49,8 @@ Progress: █████░░░░░ 47% (7/15 plans)
 - Hidden JSON fields for complex nested data serialization in forms
 - Bucket selection copies packages into template (template owns its package list)
 - isRedirectError for safe redirect handling in server action try/catch blocks
+- **CONVENTION: Always use shadcn/ui components** — never create custom HTML elements (badges, alerts, forms, selects, etc.) when a shadcn component exists or can be installed. Custom implementations only as last resort. Forms must use shadcn Form (react-hook-form) not raw `<form>` tags. (#102)
+- **CONVENTION: Cookie writes forbidden in RSC** — never call session.destroy() or modify cookies in Server Components or layouts. Cookie mutations only in Server Actions, Route Handlers, or middleware. (Next.js 16+ requirement)
 
 ## Pending Work
 
