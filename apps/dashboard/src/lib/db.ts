@@ -296,12 +296,7 @@ export class DatabaseService {
    */
   static async deleteBucket(id: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const count = await tx.package.count({
-        where: { bucketId: id },
-      });
-      if (count > 0) {
-        throw new Error("Remove all packages before deleting this bucket");
-      }
+      await tx.package.deleteMany({ where: { bucketId: id } });
       await tx.packageBucket.delete({ where: { id } });
     });
   }

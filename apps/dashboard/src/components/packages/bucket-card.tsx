@@ -85,8 +85,11 @@ export function BucketCard({ bucket }: { bucket: BucketWithPackages }) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete bucket</AlertDialogTitle>
               <AlertDialogDescription>
-                Delete bucket &ldquo;{bucket.name}&rdquo;? This cannot be
-                undone.
+                Delete bucket &ldquo;{bucket.name}&rdquo;
+                {bucket.packages.length > 0
+                  ? ` and its ${bucket.packages.length} package${bucket.packages.length !== 1 ? "s" : ""}`
+                  : ""}
+                ? This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
