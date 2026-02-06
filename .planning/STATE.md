@@ -3,16 +3,14 @@
 ## Current Position
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
-**Phase:** 1 of 6 (01-foundation)
-**Plan:** 1 of 2 in current phase
-**Status:** In progress
-**Last activity:** 2026-02-06 - Completed 01-01-PLAN.md
+**Phase:** 01-foundation — COMPLETE
+**Status:** Phase 1 complete, Phase 2-6 not started
 
-Progress: █░░░░░░░░░ 8% (1/12 plans — only 2 planned so far)
+Progress: ██░░░░░░░░ 17% (1/6 phases)
 
 ## Completed Work
 
-### Phase 1: Foundation (Issues #72-75)
+### Phase 1: Foundation (Issues #72-75) ✓
 
 **#72 — Scaffold Next.js dashboard app** ✓
 
@@ -37,14 +35,17 @@ Progress: █░░░░░░░░░ 8% (1/12 plans — only 2 planned so fa
 - ProxmoxClient class with retry logic, SSL handling, Zod schema validation
 - Auth, container, task, node, storage, template operations
 - Typed error classes
+- Uses undici fetch for self-signed cert support
 
-**#75 — Proxmox SSO authentication** ⟳ IN PROGRESS (Plan 01-01 complete, Plan 01-02 remaining)
+**#75 — Proxmox SSO authentication** ✓
 
-- ✓ iron-session + Redis-backed session management
-- ✓ Login/logout server actions with Zod validation
-- ✓ Login page UI at /login with React 19 useActionState
-- ✗ Route protection middleware (Plan 01-02)
-- ✗ Conditional layout / sidebar logout (Plan 01-02)
+- iron-session v8 + Redis-backed session management (cookie stores session ID, ticket in Redis with 2h TTL)
+- Login/logout server actions with Zod validation
+- Login page at /login with React 19 useActionState pattern
+- Edge-compatible route protection middleware
+- Route group layout: (dashboard)/ with sidebar, login/ without
+- Sidebar footer with username display and Sign out button
+- Full auth flow verified: login → dashboard → persist on refresh → logout
 
 ## Decisions Made
 
@@ -57,10 +58,13 @@ Progress: █░░░░░░░░░ 8% (1/12 plans — only 2 planned so fa
 - Cookie stores only session ID, not Proxmox ticket — session data in Redis with 2h TTL
 - iron-session v8 CookieStore API for Next.js App Router compatibility
 - Generic error messages to client — no Proxmox error detail leakage
+- undici fetch for all Proxmox API calls (bypasses Next.js global fetch patching for self-signed certs)
+- PVE_HOST/PVE_PORT env vars (with PROXMOX_HOST/PROXMOX_PORT fallback)
+- Route group pattern for auth layout separation
+- Edge middleware: cookie-existence check only (no Redis in Edge runtime)
 
 ## Pending Work
 
-- Phase 1 completion: Plan 01-02 (middleware, conditional layout, logout)
 - Phase 2: Template System (#76-79)
 - Phase 3: Container Creation (#80-82)
 - Phase 4: Container Management (#83-86)
@@ -69,10 +73,10 @@ Progress: █░░░░░░░░░ 8% (1/12 plans — only 2 planned so fa
 
 ## Blockers/Concerns
 
-- None currently
+- Docker-in-Docker networking: Coder workspace must join dashboard_default network for Redis/Postgres access (not localhost)
 
 ## Session Continuity
 
-Last session: 2026-02-06T05:52:57Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-02-06
+Stopped at: Phase 01 complete
 Resume file: None
