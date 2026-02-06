@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { X, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -10,7 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -24,6 +34,27 @@ import {
   bulkImportAction,
 } from "@/lib/packages/actions";
 
+// ============================================================================
+// Schemas
+// ============================================================================
+
+const addPackageSchema = z.object({
+  name: z.string().min(1, "Package name is required"),
+  manager: z.enum(["apt", "npm", "pip", "custom"]),
+});
+
+const bulkImportSchema = z.object({
+  content: z.string().min(1, "Paste package content to import"),
+  manager: z.enum(["apt", "npm", "pip", "custom"]),
+});
+
+type AddPackageValues = z.infer<typeof addPackageSchema>;
+type BulkImportValues = z.infer<typeof bulkImportSchema>;
+
+// ============================================================================
+// PackageList
+// ============================================================================
+
 export function PackageList({
   bucketId,
   packages,
@@ -33,16 +64,27 @@ export function PackageList({
   manager?: PackageManager;
 }) {
   const [showBulkImport, setShowBulkImport] = useState(false);
-  const [manager, setManager] = useState<string>("apt");
   const [addPending, startAddTransition] = useTransition();
   const [bulkPending, startBulkTransition] = useTransition();
   const router = useRouter();
 
-  const handleAdd = (formData: FormData) => {
+  // Add package form
+  const addForm = useForm<AddPackageValues>({
+    resolver: zodResolver(addPackageSchema),
+    defaultValues: { name: "", manager: "apt" },
+  });
+
+  const onAddPackage = (values: AddPackageValues) => {
     startAddTransition(async () => {
+      const formData = new FormData();
+      formData.set("bucketId", bucketId);
+      formData.set("name", values.name);
+      formData.set("manager", values.manager);
+
       const result = await addPackageAction({ success: false }, formData);
       if (result.success && result.message) {
         toast.success(result.message);
+        addForm.reset();
         router.refresh();
       } else if (!result.success && result.error) {
         toast.error(result.error);
@@ -50,11 +92,23 @@ export function PackageList({
     });
   };
 
-  const handleBulkImport = (formData: FormData) => {
+  // Bulk import form
+  const bulkForm = useForm<BulkImportValues>({
+    resolver: zodResolver(bulkImportSchema),
+    defaultValues: { content: "", manager: "apt" },
+  });
+
+  const onBulkImport = (values: BulkImportValues) => {
     startBulkTransition(async () => {
+      const formData = new FormData();
+      formData.set("bucketId", bucketId);
+      formData.set("content", values.content);
+      formData.set("manager", values.manager);
+
       const result = await bulkImportAction({ success: false }, formData);
       if (result.success && result.message) {
         toast.success(result.message);
+        bulkForm.reset();
         setShowBulkImport(false);
         router.refresh();
       } else if (!result.success && result.error) {
@@ -77,35 +131,57 @@ export function PackageList({
       )}
 
       {/* Add package inline form */}
-      <form action={handleAdd} className="flex items-center gap-2">
-        <input type="hidden" name="bucketId" value={bucketId} />
-        <input type="hidden" name="manager" value={manager} />
-        <Input
-          name="name"
-          placeholder="Package name"
-          className="h-7 text-xs flex-1"
-          required
-        />
-        <Select value={manager} onValueChange={setManager}>
-          <SelectTrigger className="h-7 w-20 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="apt">apt</SelectItem>
-            <SelectItem value="npm">npm</SelectItem>
-            <SelectItem value="pip">pip</SelectItem>
-            <SelectItem value="custom">custom</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          type="submit"
-          size="icon-xs"
-          variant="outline"
-          disabled={addPending}
+      <Form {...addForm}>
+        <form
+          onSubmit={addForm.handleSubmit(onAddPackage)}
+          className="flex items-center gap-2"
         >
-          <Plus className="size-3" />
-        </Button>
-      </form>
+          <FormField
+            control={addForm.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className="flex-1 space-y-0">
+                <FormControl>
+                  <Input
+                    placeholder="Package name"
+                    className="h-7 text-xs"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={addForm.control}
+            name="manager"
+            render={({ field }) => (
+              <FormItem className="space-y-0">
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="h-7 w-20 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="apt">apt</SelectItem>
+                    <SelectItem value="npm">npm</SelectItem>
+                    <SelectItem value="pip">pip</SelectItem>
+                    <SelectItem value="custom">custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+          <Button
+            type="submit"
+            size="icon-xs"
+            variant="outline"
+            disabled={addPending}
+          >
+            <Plus className="size-3" />
+          </Button>
+        </form>
+      </Form>
 
       {/* Bulk import toggle */}
       <Button
@@ -121,51 +197,74 @@ export function PackageList({
 
       {/* Bulk import form */}
       {showBulkImport && (
-        <form
-          action={handleBulkImport}
-          className="space-y-2 rounded-md border p-3"
-        >
-          <input type="hidden" name="bucketId" value={bucketId} />
-          <div className="space-y-1">
-            <Label className="text-xs">
-              Paste package list (one per line, # for comments)
-            </Label>
-            <Textarea
+        <Form {...bulkForm}>
+          <form
+            onSubmit={bulkForm.handleSubmit(onBulkImport)}
+            className="space-y-2 rounded-md border p-3"
+          >
+            <FormField
+              control={bulkForm.control}
               name="content"
-              placeholder={`# Example .apt file\ncurl\nwget\ngit`}
-              className="min-h-20 text-xs font-mono"
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">
+                    Paste package list (one per line, # for comments)
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder={`# Example .apt file\ncurl\nwget\ngit`}
+                      className="min-h-20 text-xs font-mono"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <Select name="manager" defaultValue="apt">
-              <SelectTrigger className="h-7 w-24 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="apt">apt</SelectItem>
-                <SelectItem value="npm">npm</SelectItem>
-                <SelectItem value="pip">pip</SelectItem>
-                <SelectItem value="custom">custom</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit" size="xs" disabled={bulkPending}>
-              Import
-            </Button>
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              onClick={() => setShowBulkImport(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+            <div className="flex items-center gap-2">
+              <FormField
+                control={bulkForm.control}
+                name="manager"
+                render={({ field }) => (
+                  <FormItem className="space-y-0">
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="h-7 w-24 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="apt">apt</SelectItem>
+                        <SelectItem value="npm">npm</SelectItem>
+                        <SelectItem value="pip">pip</SelectItem>
+                        <SelectItem value="custom">custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" size="xs" disabled={bulkPending}>
+                Import
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                onClick={() => setShowBulkImport(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Form>
       )}
     </div>
   );
 }
+
+// ============================================================================
+// PackageBadge
+// ============================================================================
 
 function PackageBadge({ pkg }: { pkg: Package }) {
   const [isPending, startTransition] = useTransition();
