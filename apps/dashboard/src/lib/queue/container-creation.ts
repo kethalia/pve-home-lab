@@ -11,7 +11,7 @@ import { getRedis } from "../redis";
 export interface ContainerJobData {
   containerId: string; // Prisma Container ID (cuid)
   nodeId: string; // Prisma ProxmoxNode ID
-  templateId: string; // Prisma Template ID (for fetching scripts/files/packages)
+  templateId: string | null; // Prisma Template ID (null = "From Scratch" mode)
   config: {
     hostname: string;
     vmid: number;
@@ -30,6 +30,15 @@ export interface ContainerJobData {
     ostemplate: string; // e.g., "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
     tags?: string;
   };
+  /** User's package/script selections from the wizard (optional) */
+  enabledBuckets?: string[]; // Package manager names the user enabled
+  additionalPackages?: string; // Free-text additional packages
+  scripts?: Array<{
+    id: string;
+    name: string;
+    enabled: boolean;
+    order: number;
+  }>;
 }
 
 /** Progress event published via Redis Pub/Sub */

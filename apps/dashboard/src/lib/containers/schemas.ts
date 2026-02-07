@@ -57,7 +57,13 @@ export const containerConfigBaseSchema = z.object({
     .max(10240, "Maximum 10240 GB"),
   storage: z.string().min(1, "Storage is required"),
   bridge: z.string().min(1, "Network bridge is required"),
-  ipConfig: z.string().min(1, "IP configuration is required"),
+  ipConfig: z
+    .string()
+    .min(1, "IP configuration is required")
+    .refine((val) => !val.includes("dhcp"), {
+      message:
+        "DHCP is not supported — use a static IP (e.g., ip=10.0.0.50/24,gw=10.0.0.1)",
+    }),
   nameserver: z.string().optional(),
   unprivileged: z.boolean(),
   nesting: z.boolean(),
@@ -80,7 +86,7 @@ export const containerConfigSchema = containerConfigBaseSchema.refine(
 // ============================================================================
 
 export const packageSelectionSchema = z.object({
-  enabledBuckets: z.array(z.string()), // bucket IDs that are enabled
+  enabledBuckets: z.array(z.string()), // enabled package manager names (e.g., "apt", "pip")
   additionalPackages: z.string().optional(), // free-text additional packages
 });
 
@@ -127,7 +133,13 @@ export const createContainerInputSchema = z.object({
   diskSize: z.coerce.number().int().min(1).default(8),
   storage: z.string().min(1),
   bridge: z.string().min(1),
-  ipConfig: z.string().default("ip=dhcp"),
+  ipConfig: z
+    .string()
+    .min(1, "IP configuration is required")
+    .refine((val) => !val.includes("dhcp"), {
+      message:
+        "DHCP is not supported — use a static IP (e.g., ip=10.0.0.50/24,gw=10.0.0.1)",
+    }),
   nameserver: z.string().optional(),
   unprivileged: z.boolean().default(true),
   nesting: z.boolean().default(false),

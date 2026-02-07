@@ -71,16 +71,26 @@ async function publishProgress(
 
   // Only persist step, complete, and error events to DB (skip log events)
   if (event.type !== "log") {
+    // Map progress event type + step to the appropriate DB EventType
+    const stepToEventType: Record<string, EventType> = {
+      creating: EventType.created,
+      starting: EventType.started,
+      deploying: EventType.service_ready,
+      syncing: EventType.script_completed,
+      finalizing: EventType.service_ready,
+    };
+
+    const dbEventType =
+      event.type === "complete"
+        ? EventType.created
+        : event.type === "error"
+          ? EventType.error
+          : (event.step && stepToEventType[event.step]) ||
+            EventType.script_completed;
+
     await DatabaseService.createContainerEvent({
       containerId,
-      type:
-        event.type === "complete"
-          ? EventType.created
-          : event.type === "error"
-            ? EventType.error
-            : event.type === "step" && event.step === "starting"
-              ? EventType.started
-              : EventType.script_completed,
+      type: dbEventType,
       message: event.message,
       metadata: JSON.stringify({ step: event.step, percent: event.percent }),
     });
@@ -128,7 +138,15 @@ const SYSTEM_SERVICES = new Set([
 async function processContainerCreation(
   job: Job<ContainerJobData, ContainerJobResult>,
 ): Promise<ContainerJobResult> {
-  const { containerId, nodeId, templateId, config } = job.data;
+  const {
+    containerId,
+    nodeId,
+    templateId,
+    config,
+    enabledBuckets,
+    additionalPackages,
+    scripts: scriptSelections,
+  } = job.data;
   let ssh: SSHSession | null = null;
 
   try {
@@ -251,17 +269,19 @@ async function processContainerCreation(
       message: "Created directory structure",
     });
 
-    // Fetch template with scripts, files, packages from DB
-    const template = await prisma.template.findUnique({
-      where: { id: templateId },
-      include: {
-        scripts: { where: { enabled: true }, orderBy: { order: "asc" } },
-        files: true,
-        packages: true,
-      },
-    });
+    // Fetch template with scripts, files, packages from DB (if using a template)
+    const template = templateId
+      ? await prisma.template.findUnique({
+          where: { id: templateId },
+          include: {
+            scripts: { where: { enabled: true }, orderBy: { order: "asc" } },
+            files: true,
+            packages: true,
+          },
+        })
+      : null;
 
-    if (!template) {
+    if (templateId && !template) {
       throw new Error(`Template not found: ${templateId}`);
     }
 
@@ -269,8 +289,8 @@ async function processContainerCreation(
     const configEnvContent = [
       `CONFIG_REPO_URL=${process.env.CONFIG_REPO_URL || ""}`,
       `CONFIG_BRANCH=main`,
-      `CONFIG_PATH=${template.path || template.name}`,
-      `TEMPLATE_NAME=${template.name}`,
+      `CONFIG_PATH=${template?.path || template?.name || "scratch"}`,
+      `TEMPLATE_NAME=${template?.name || "scratch"}`,
       `CONTAINER_ID=${containerId}`,
     ].join("\n");
 
@@ -376,7 +396,7 @@ WantedBy=multi-user.target
     });
 
     // Phase 3b: Deploy template files
-    if (template.files.length > 0) {
+    if (template && template.files.length > 0) {
       for (const file of template.files) {
         // Ensure target directory exists
         await ssh.exec(`mkdir -p "${file.targetPath}"`);
@@ -412,8 +432,10 @@ WantedBy=multi-user.target
     });
 
     // Run config-manager service once (initial sync)
-    const syncExitCode = await ssh.execStreaming(
-      "systemctl start config-manager.service 2>&1 && journalctl -u config-manager.service --no-pager -n 50 2>/dev/null || true",
+    // Use `;` instead of `&&` so journalctl runs regardless of sync outcome.
+    // The exit code comes from journalctl (always 0) — check sync separately via systemctl.
+    await ssh.execStreaming(
+      "systemctl start config-manager.service 2>&1; journalctl -u config-manager.service --no-pager -n 50 2>/dev/null",
       (line) => {
         publishProgress(containerId, {
           type: "log",
@@ -422,20 +444,98 @@ WantedBy=multi-user.target
       },
     );
 
-    if (syncExitCode !== 0) {
+    // Check actual sync result
+    const syncResult = await ssh.exec(
+      "systemctl is-failed config-manager.service 2>/dev/null || true",
+    );
+    const syncFailed = syncResult.stdout.trim() === "failed";
+
+    if (syncFailed) {
       await publishProgress(containerId, {
         type: "log",
-        message: `Config-manager sync exited with code ${syncExitCode} (non-fatal)`,
+        message:
+          "Config-manager sync failed (non-fatal — scripts will still run)",
       });
     }
 
+    // Install user-selected packages (from wizard enabledBuckets + additionalPackages)
+    if ((enabledBuckets && enabledBuckets.length > 0) || additionalPackages) {
+      await publishProgress(containerId, {
+        type: "log",
+        message: "Installing user-selected packages...",
+      });
+
+      // Collect packages from template by enabled bucket managers
+      const templatePackages =
+        template && enabledBuckets
+          ? template.packages.filter((p) => enabledBuckets.includes(p.manager))
+          : [];
+
+      // Install apt packages
+      const aptPackages = templatePackages
+        .filter((p) => p.manager === "apt")
+        .map((p) => p.name);
+
+      // Append free-text additional packages (assumed apt)
+      if (additionalPackages) {
+        const extra = additionalPackages
+          .split(/[\s,]+/)
+          .filter((p) => p.trim());
+        aptPackages.push(...extra);
+      }
+
+      if (aptPackages.length > 0) {
+        const installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get install -y -qq ${aptPackages.join(" ")}`;
+        const installExit = await ssh.execStreaming(installCmd, (line) => {
+          publishProgress(containerId, {
+            type: "log",
+            message: line,
+          });
+        });
+        if (installExit !== 0) {
+          await publishProgress(containerId, {
+            type: "log",
+            message: `Package installation exited with code ${installExit} (non-fatal)`,
+          });
+        }
+      }
+
+      // Install pip packages
+      const pipPackages = templatePackages
+        .filter((p) => p.manager === "pip")
+        .map((p) => p.name);
+
+      if (pipPackages.length > 0) {
+        const pipCmd = `pip install --quiet ${pipPackages.join(" ")}`;
+        const pipExit = await ssh.execStreaming(pipCmd, (line) => {
+          publishProgress(containerId, { type: "log", message: line });
+        });
+        if (pipExit !== 0) {
+          await publishProgress(containerId, {
+            type: "log",
+            message: `pip install exited with code ${pipExit} (non-fatal)`,
+          });
+        }
+      }
+    }
+
+    // Filter template scripts by user's wizard selections (if provided)
+    const enabledScripts = template
+      ? scriptSelections
+        ? template.scripts.filter((s) => {
+            const selection = scriptSelections.find((sel) => sel.id === s.id);
+            return selection ? selection.enabled : s.enabled;
+          })
+        : template.scripts
+      : [];
+
     // Execute template scripts
-    if (template.scripts.length > 0) {
-      const scriptCount = template.scripts.length;
+    if (enabledScripts.length > 0) {
+      const scriptCount = enabledScripts.length;
       const percentPerScript = 25 / scriptCount; // Distribute 65-90% across scripts
 
-      for (let i = 0; i < template.scripts.length; i++) {
-        const script = template.scripts[i];
+      for (let i = 0; i < enabledScripts.length; i++) {
+        const script = enabledScripts[i];
         const scriptPercent = Math.round(65 + (i + 1) * percentPerScript);
 
         await publishProgress(containerId, {

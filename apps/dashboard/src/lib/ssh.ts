@@ -171,12 +171,22 @@ export async function connectWithRetry(
   const initialDelay = options?.initialDelay ?? 2000;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let session: SSHSession | null = null;
     try {
-      const session = new SSHSession(config);
+      session = new SSHSession(config);
       // Wait for the ready promise to confirm connection
       await session.exec("echo ok");
       return session;
     } catch (err) {
+      // Close the failed session to avoid leaking sockets
+      if (session) {
+        try {
+          session.close();
+        } catch {
+          // Ignore close errors on failed session
+        }
+      }
+
       if (attempt === maxAttempts) {
         throw new Error(
           `SSH connection failed after ${maxAttempts} attempts: ${err instanceof Error ? err.message : String(err)}`,

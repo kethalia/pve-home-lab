@@ -271,7 +271,7 @@ export const createContainerAction = authActionClient
     await queue.add("create-container", {
       containerId: container.id,
       nodeId: node.id,
-      templateId: data.templateId || "",
+      templateId: data.templateId || null,
       config: {
         hostname: data.hostname,
         vmid: data.vmid,
@@ -290,6 +290,9 @@ export const createContainerAction = authActionClient
         ostemplate,
         tags: data.tags,
       },
+      enabledBuckets: data.enabledBuckets,
+      additionalPackages: data.additionalPackages,
+      scripts: data.scripts,
     });
 
     revalidatePath("/containers");

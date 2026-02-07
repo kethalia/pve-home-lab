@@ -137,7 +137,7 @@ export function useContainerProgress(containerId: string) {
     } else if (isComplete || stepIndex < currentIndex) {
       stepStatus = "completed";
     } else if (stepIndex === currentIndex) {
-      stepStatus = isComplete ? "completed" : "active";
+      stepStatus = "active";
     }
 
     return {

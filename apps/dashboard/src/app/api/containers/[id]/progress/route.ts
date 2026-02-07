@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import Redis from "ioredis";
 import { DatabaseService } from "@/lib/db";
+import { getSessionData } from "@/lib/session";
 import {
   getProgressChannel,
   type ContainerProgressEvent,
@@ -23,6 +24,12 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // Validate session — only authenticated users can stream progress
+  const session = await getSessionData();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id: containerId } = await params;
 
   // Verify container exists
