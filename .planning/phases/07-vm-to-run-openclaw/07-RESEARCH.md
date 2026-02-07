@@ -12,7 +12,7 @@ The standard approach is using Debian 13 cloud images as base, adding desktop en
 
 **Key requirements:** Debian 13 base, minimal desktop (XFCE/LXQt), auto-login, VNC server, Chrome browser, Node.js 22+, and QEMU guest agent for Proxmox integration.
 
-**Primary recommendation:** Use Debian 13 generic cloud image with cloud-init to automate desktop environment installation and auto-login configuration.
+**Primary recommendation:** Use the ProxmoxVE community Debian 13 VM script as foundation, with minimal cloud-init for user/SSH bootstrap. All desktop software is installed via modular, idempotent post-install scripts (single source of truth).
 
 ## User Constraints (from Requirements)
 
@@ -93,55 +93,49 @@ VM Template (ID 9XXX)
 └── QEMU guest agent integration
 ```
 
-### Pattern 1: Cloud-Init Desktop Automation
+### Pattern 1: Minimal Cloud-Init Bootstrap + Post-Install Scripts
 
-**What:** Automated desktop environment installation and configuration via cloud-init
+**What:** Cloud-init handles minimal bootstrap (user, SSH, basic packages). All desktop software installed via modular post-install scripts — the single source of truth.
 **When to use:** For standardized desktop VM template creation
-**Example:**
+**Note:** Cloud-init is intentionally minimal. Scripts handle software installation for maintainability and re-runnability.
+
+**Minimal cloud-init example (bootstrap only):**
 
 ```yaml
 # /var/lib/vz/snippets/openclaw-desktop.yaml
 #cloud-config
-packages:
-  - task-xfce-desktop
-  - lightdm
-  - lightdm-gtk-greeter
-  - tigervnc-standalone-server
-  - qemu-guest-agent
-  - curl
-  - ca-certificates
-  - gnupg
-
-runcmd:
-  # Install Node.js 22+ via NodeSource
-  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  - apt-get install -y nodejs
-
-  # Install Chrome
-  - wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-  - echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/chrome.list
-  - apt-get update && apt-get install -y google-chrome-stable
-
-  # Configure auto-login
-  - sed -i 's/#autologin-user=/autologin-user=openclaw/' /etc/lightdm/lightdm.conf
-  - sed -i 's/#autologin-user-timeout=0/autologin-user-timeout=0/' /etc/lightdm/lightdm.conf
-
-  # Enable services
-  - systemctl enable lightdm
-  - systemctl enable qemu-guest-agent
-
-  # Configure VNC server
-  - mkdir -p /home/openclaw/.vnc
-  - echo "openclaw123" | vncpasswd -f > /home/openclaw/.vnc/passwd
-  - chmod 600 /home/openclaw/.vnc/passwd
-  - chown -R openclaw:openclaw /home/openclaw/.vnc
+hostname: openclaw-desktop
+manage_etc_hosts: true
 
 users:
   - name: openclaw
-    groups: sudo
+    groups: sudo,audio,video,render
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ALL=(ALL) ALL
+    lock_passwd: false
+
+package_update: true
+packages:
+  - curl
+  - wget
+  - ca-certificates
+  - gnupg
+  - openssh-server
+  - git
+
+runcmd:
+  - systemctl enable ssh
+  - systemctl start ssh
 ```
+
+**Post-install scripts then handle (see Plan 02):**
+
+- Desktop environment (XFCE + LightDM + auto-login)
+- Chrome browser (via modern GPG keyring, not deprecated apt-key)
+- Node.js 22+ (via NodeSource)
+- TigerVNC remote access
+- OpenClaw installation
+- QEMU guest agent
 
 ### Pattern 2: Auto-Login Configuration
 
@@ -268,88 +262,23 @@ qm set $VMID --scsi1 $STORAGE:cloudinit
 qm set $VMID --cicustom "user=local:snippets/openclaw-desktop.yaml"
 ```
 
-### Complete Cloud-Init Configuration
+### Software Installation (via post-install scripts)
 
-```yaml
-# Source: Cloud-init documentation + Debian wiki
-#cloud-config
-hostname: openclaw-desktop
-manage_etc_hosts: true
+**Note:** Software installation is handled by numbered post-install scripts, not cloud-init. See Plan 07-02 for the canonical implementation. Key patterns used in scripts:
 
-users:
-  - name: openclaw
-    groups: sudo,audio,video
-    shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    lock_passwd: false
-    passwd: $6$rounds=4096$salted$hash # Use proper password hash
+```bash
+# Chrome — use modern GPG keyring (NOT deprecated apt-key)
+curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+  | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] \
+  http://dl.google.com/linux/chrome/deb/ stable main" \
+  > /etc/apt/sources.list.d/google-chrome.list
+apt-get update && apt-get install -y google-chrome-stable
 
-packages:
-  - task-xfce-desktop
-  - lightdm
-  - lightdm-gtk-greeter
-  - tigervnc-standalone-server
-  - xrdp
-  - qemu-guest-agent
-  - firefox-esr
-  - curl
-  - wget
-  - ca-certificates
-  - gnupg
-  - software-properties-common
-
-write_files:
-  - path: /etc/lightdm/lightdm.conf.d/50-autologin.conf
-    content: |
-      [Seat:*]
-      autologin-user=openclaw
-      autologin-user-timeout=0
-    permissions: "0644"
-
-  - path: /etc/systemd/system/vncserver@.service
-    content: |
-      [Unit]
-      Description=Start TigerVNC server at startup
-      After=syslog.target network.target
-
-      [Service]
-      Type=forking
-      User=openclaw
-      Group=openclaw
-      WorkingDirectory=/home/openclaw
-      ExecStartPre=-/usr/bin/vncserver -kill :%i > /dev/null 2>&1
-      ExecStart=/usr/bin/vncserver -depth 24 -geometry 1920x1080 :%i
-      ExecStop=/usr/bin/vncserver -kill :%i
-
-      [Install]
-      WantedBy=multi-user.target
-    permissions: "0644"
-
-runcmd:
-  # Install Node.js 22 via NodeSource
-  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  - apt-get install -y nodejs
-
-  # Install Google Chrome
-  - wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-  - echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/chrome.list
-  - apt-get update && apt-get install -y google-chrome-stable
-
-  # Configure VNC for openclaw user
-  - sudo -u openclaw mkdir -p /home/openclaw/.vnc
-  - echo "openclaw123" | sudo -u openclaw vncpasswd -f > /home/openclaw/.vnc/passwd
-  - sudo -u openclaw chmod 600 /home/openclaw/.vnc/passwd
-
-  # Enable services
-  - systemctl enable lightdm
-  - systemctl enable qemu-guest-agent
-  - systemctl enable vncserver@1
-
-  # Install OpenClaw
-  - sudo -u openclaw npm install -g openclaw@latest
-
-  # Final reboot to start desktop
-  - reboot
+# VNC — password set during script execution (user-configurable)
+sudo -u openclaw mkdir -p /home/openclaw/.vnc
+echo "<VNC_PASSWORD>" | sudo -u openclaw vncpasswd -f > /home/openclaw/.vnc/passwd
+chmod 600 /home/openclaw/.vnc/passwd
 ```
 
 ## State of the Art

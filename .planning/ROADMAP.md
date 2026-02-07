@@ -101,7 +101,7 @@ Issues: #89, #90
 
 ---
 
-### Phase 07: VM to Run Openclaw
+### Phase 07: VM to Run OpenClaw
 
 **Goal:** Create a VM template in infra/ that provisions a Debian 13 desktop VM with XFCE, Chrome, Node.js, VNC, and OpenClaw using the ProxmoxVE community script as foundation
 **Depends on:** Phase 06

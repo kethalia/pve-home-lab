@@ -66,7 +66,7 @@ Progress: █████░░░░░ 47% (7/15 plans)
 
 ### Roadmap Evolution
 
-- Phase 07 added: VM to Run Openclaw
+- Phase 07 added: VM to Run OpenClaw
 
 ## Session Continuity
 
