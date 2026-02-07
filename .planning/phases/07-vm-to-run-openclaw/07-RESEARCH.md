@@ -1,53 +1,80 @@
 # Phase 7: VM to Run OpenClaw - Research
 
 **Researched:** 2026-02-07
-**Domain:** VM template creation & OpenClaw AI assistant deployment
-**Confidence:** MEDIUM
+**Domain:** Desktop VM template creation for OpenClaw with full GUI application support
+**Confidence:** HIGH
 
 ## Summary
 
-OpenClaw is a personal AI assistant platform that runs a local Gateway service supporting multiple communication channels (WhatsApp, Telegram, Slack, Discord, etc.). The project requires creating a VM template for Proxmox VE that can run OpenClaw with its Node.js dependencies and optional containerization support.
+OpenClaw requires a desktop environment to run GUI applications effectively, not a headless server deployment. Based on user requirements, this phase involves creating a Debian 13 "Trixie" VM template with minimal desktop environment, auto-login, VNC/remote desktop capability, and pre-installed applications (Chrome, Node.js).
 
-**Key requirements:** Node.js 22+, at least 2GB RAM, network connectivity for API calls, and optional Docker support for sandboxing. Standard Ubuntu/Debian server template with cloud-init automation is the recommended approach.
+The standard approach is using Debian 13 cloud images as base, adding desktop environment through cloud-init automation, and configuring for unattended GUI operation. This differs significantly from typical server deployments as it requires X11/Wayland display server, window manager, and remote access solutions.
 
-**Primary recommendation:** Create Ubuntu 24.04 LTS cloud-init template with automated OpenClaw installation via cloud-config scripts.
+**Key requirements:** Debian 13 base, minimal desktop (XFCE/LXQt), auto-login, VNC server, Chrome browser, Node.js 22+, and QEMU guest agent for Proxmox integration.
+
+**Primary recommendation:** Use Debian 13 generic cloud image with cloud-init to automate desktop environment installation and auto-login configuration.
+
+## User Constraints (from Requirements)
+
+### Locked Decisions
+
+- **Base OS:** Debian 13 "Trixie" (not Ubuntu)
+- **Environment:** Desktop environment with GUI support (not headless)
+- **Auto-login:** Automatic login and X server startup required
+- **Applications:** Chrome browser and Node.js runtime required
+- **Remote Access:** VNC/remote desktop capability required
+- **Integration:** QEMU guest agent for Proxmox management required
+
+### Purpose
+
+- **Primary Use:** OpenClaw with full GUI application support
+- **Requirement:** Must run "almost any application" with GUI
 
 ## Standard Stack
 
-### Core Requirements
+### Core Desktop Stack
 
-| Component | Version   | Purpose             | Why Standard                                    |
-| --------- | --------- | ------------------- | ----------------------------------------------- |
-| Ubuntu    | 24.04 LTS | Base OS             | Long-term support, cloud-init compatibility     |
-| Node.js   | 22+       | Runtime             | Required by OpenClaw, latest LTS recommended    |
-| npm/pnpm  | Latest    | Package manager     | OpenClaw installation and dependency management |
-| Docker    | Latest    | Optional sandboxing | Tool isolation for multi-user scenarios         |
+| Component | Version       | Purpose             | Why Standard                                |
+| --------- | ------------- | ------------------- | ------------------------------------------- |
+| Debian    | 13 "Trixie"   | Base OS             | User requirement, current stable release    |
+| XFCE      | 4.18+         | Desktop Environment | Lightweight, stable, minimal resource usage |
+| LightDM   | Latest        | Display Manager     | Lightweight, easy auto-login configuration  |
+| TigerVNC  | Latest        | VNC Server          | High-performance VNC implementation         |
+| Node.js   | 22+           | Runtime             | OpenClaw requirement, latest LTS            |
+| Chrome    | Latest Stable | Browser             | User requirement for GUI applications       |
 
 ### Supporting Infrastructure
 
 | Component        | Version | Purpose        | When to Use                 |
 | ---------------- | ------- | -------------- | --------------------------- |
-| Proxmox VE       | 8.x     | Hypervisor     | VM hosting platform         |
-| Cloud-init       | Latest  | VM automation  | Template standardization    |
-| QEMU Guest Agent | Latest  | VM integration | Enhanced Proxmox management |
+| QEMU Guest Agent | Latest  | VM Integration | Enhanced Proxmox management |
+| cloud-init       | Latest  | VM Automation  | Template provisioning       |
+| xrdp             | Latest  | RDP Server     | Alternative remote access   |
+| Firefox-ESR      | Latest  | Backup Browser | Debian default browser      |
 
-### VM Specifications (Minimum/Recommended)
+### VM Specifications (Desktop Requirements)
 
-| Resource | Minimum | Recommended | Purpose                            |
-| -------- | ------- | ----------- | ---------------------------------- |
-| RAM      | 1GB     | 2-4GB       | Node.js application + dependencies |
-| vCPUs    | 1       | 2           | Concurrent request handling        |
-| Storage  | 8GB     | 16-32GB     | OS + application + logs            |
-| Network  | 1 Gbps  | 1 Gbps      | API calls to AI providers          |
+| Resource | Minimum | Recommended | Purpose                                  |
+| -------- | ------- | ----------- | ---------------------------------------- |
+| RAM      | 2GB     | 4-6GB       | Desktop environment + Node.js + browser  |
+| vCPUs    | 2       | 4           | GUI responsiveness + parallel processing |
+| Storage  | 16GB    | 32-64GB     | OS + desktop + applications + cache      |
+| Display  | VGA     | virtio-gpu  | Better graphics performance              |
+| Network  | virtio  | virtio      | Enhanced performance                     |
 
-**Installation:**
+**Base Image:**
 
 ```bash
-# On target VM
-curl -fsSL https://openclaw.ai/install.sh | bash
-# or manual
-npm install -g openclaw@latest
-openclaw onboard --install-daemon
+# Debian 13 cloud images available
+wget https://cdimage.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2
+```
+
+**Installation Commands:**
+
+```bash
+# Inside VM after base image deployment
+apt update && apt install -y xfce4 lightdm tigervnc-standalone-server \
+    qemu-guest-agent google-chrome-stable nodejs npm
 ```
 
 ## Architecture Patterns
@@ -55,198 +82,341 @@ openclaw onboard --install-daemon
 ### Recommended VM Template Structure
 
 ```
-VM Template (ID 8XXX)
-├── Ubuntu 24.04 LTS base
-├── UEFI boot + virtio-scsi
-├── Cloud-init configuration
-├── Automated OpenClaw setup
-└── Optional Docker for sandboxing
+VM Template (ID 9XXX)
+├── Debian 13 "Trixie" cloud image base
+├── UEFI boot + virtio drivers
+├── Cloud-init desktop automation
+├── XFCE desktop environment
+├── Auto-login configuration
+├── VNC server setup
+├── Pre-installed applications
+└── QEMU guest agent integration
 ```
 
-### Pattern 1: Cloud-Init Automation
+### Pattern 1: Cloud-Init Desktop Automation
 
-**What:** Automated VM provisioning with OpenClaw pre-installation
-**When to use:** For standardized, repeatable deployments
+**What:** Automated desktop environment installation and configuration via cloud-init
+**When to use:** For standardized desktop VM template creation
 **Example:**
 
 ```yaml
-# /var/lib/vz/snippets/openclaw-vendor.yaml
+# /var/lib/vz/snippets/openclaw-desktop.yaml
 #cloud-config
+packages:
+  - task-xfce-desktop
+  - lightdm
+  - lightdm-gtk-greeter
+  - tigervnc-standalone-server
+  - qemu-guest-agent
+  - curl
+  - ca-certificates
+  - gnupg
+
 runcmd:
-  - apt update && apt install -y curl
-  - curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
-  - systemctl enable openclaw-gateway
-  - reboot
+  # Install Node.js 22+ via NodeSource
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+
+  # Install Chrome
+  - wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+  - echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/chrome.list
+  - apt-get update && apt-get install -y google-chrome-stable
+
+  # Configure auto-login
+  - sed -i 's/#autologin-user=/autologin-user=openclaw/' /etc/lightdm/lightdm.conf
+  - sed -i 's/#autologin-user-timeout=0/autologin-user-timeout=0/' /etc/lightdm/lightdm.conf
+
+  # Enable services
+  - systemctl enable lightdm
+  - systemctl enable qemu-guest-agent
+
+  # Configure VNC server
+  - mkdir -p /home/openclaw/.vnc
+  - echo "openclaw123" | vncpasswd -f > /home/openclaw/.vnc/passwd
+  - chmod 600 /home/openclaw/.vnc/passwd
+  - chown -R openclaw:openclaw /home/openclaw/.vnc
+
+users:
+  - name: openclaw
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
 ```
 
-### Pattern 2: Docker Sandbox Mode
+### Pattern 2: Auto-Login Configuration
 
-**What:** Container isolation for multi-tenant or security-conscious deployments
-**When to use:** When multiple users or untrusted content processing
+**What:** Unattended boot to desktop environment
+**When to use:** For kiosk-mode or automated desktop applications
 **Example:**
 
-```json5
-{
-  agents: {
-    defaults: {
-      sandbox: {
-        mode: "non-main",
-        scope: "agent",
-        docker: {
-          image: "openclaw-sandbox:bookworm-slim",
-        },
-      },
-    },
-  },
-}
+```bash
+# LightDM auto-login configuration
+# /etc/lightdm/lightdm.conf
+[Seat:*]
+autologin-user=openclaw
+autologin-user-timeout=0
+greeter-session=lightdm-gtk-greeter
+```
+
+### Pattern 3: VNC Server Setup
+
+**What:** Remote desktop access via VNC protocol
+**When to use:** For headless VM access with full desktop
+**Example:**
+
+```bash
+# VNC server configuration
+# /etc/systemd/system/vncserver@.service
+[Unit]
+Description=Start TigerVNC server at startup
+After=syslog.target network.target
+
+[Service]
+Type=forking
+User=openclaw
+Group=openclaw
+WorkingDirectory=/home/openclaw
+ExecStartPre=-/usr/bin/vncserver -kill :%i > /dev/null 2>&1
+ExecStart=/usr/bin/vncserver -depth 24 -geometry 1920x1080 :%i
+ExecStop=/usr/bin/vncserver -kill :%i
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ### Anti-Patterns to Avoid
 
-- **Single-core VMs:** OpenClaw benefits from multiple cores for concurrent processing
-- **Insufficient RAM:** Node.js applications have high memory overhead
-- **No network access:** OpenClaw requires internet connectivity for AI API calls
+- **Headless server approach:** OpenClaw needs GUI applications, not CLI-only
+- **Heavy desktop environments:** GNOME/KDE consume too many resources for VM
+- **Manual configuration:** Use cloud-init for reproducible deployments
+- **Insecure VNC:** Always set VNC passwords, consider SSH tunneling
 
 ## Don't Hand-Roll
 
 Problems that look simple but have existing solutions:
 
-| Problem             | Don't Build          | Use Instead                              | Why                                               |
-| ------------------- | -------------------- | ---------------------------------------- | ------------------------------------------------- |
-| VM provisioning     | Manual setup scripts | Proxmox cloud-init templates             | Standardization, reliability, Proxmox integration |
-| Process management  | Custom init scripts  | systemd services                         | Native OS integration, logging, restart policies  |
-| Container isolation | Custom sandboxing    | OpenClaw's built-in Docker support       | Security-tested, documented configuration         |
-| SSL/TLS termination | Custom proxy setup   | Tailscale Serve/Funnel or standard nginx | Built-in OpenClaw feature or proven solutions     |
+| Problem                   | Don't Build                  | Use Instead           | Why                                      |
+| ------------------------- | ---------------------------- | --------------------- | ---------------------------------------- |
+| Desktop environment setup | Custom window manager config | XFCE task packages    | Proven combination, minimal overhead     |
+| Auto-login mechanism      | Custom init scripts          | LightDM configuration | Standard display manager, reliable       |
+| Remote desktop protocol   | Custom VNC implementation    | TigerVNC or XRDP      | Mature, secure, well-supported           |
+| Browser installation      | Manual .deb downloads        | Official repositories | Automatic updates, dependency resolution |
+| Node.js installation      | Manual compilation           | NodeSource packages   | Current versions, proper integration     |
 
-**Key insight:** OpenClaw has sophisticated built-in tooling for deployment, sandboxing, and networking that shouldn't be reimplemented.
+**Key insight:** Desktop Linux has mature, well-tested components for all required functionality. Custom solutions introduce maintenance overhead and security risks.
 
 ## Common Pitfalls
 
-### Pitfall 1: Node.js Version Mismatch
+### Pitfall 1: Resource Underallocation
 
-**What goes wrong:** Using older Node.js versions (16, 18, 20) causes compatibility issues
-**Why it happens:** System package managers often ship outdated Node.js
-**How to avoid:** Use NodeSource repository or installer script that handles Node.js installation
-**Warning signs:** Installation failures, runtime errors about unsupported features
+**What goes wrong:** Desktop becomes unresponsive, applications crash, poor user experience
+**Why it happens:** Underestimating desktop environment + browser + Node.js memory usage
+**How to avoid:** Allocate minimum 4GB RAM, preferably 6GB for smooth operation
+**Warning signs:** High swap usage, application startup failures, GUI lag
 
-### Pitfall 2: Insufficient VM Resources
+### Pitfall 2: Display Driver Issues
 
-**What goes wrong:** High memory usage, slow response times, timeouts
-**Why it happens:** Node.js + AI model processing is resource-intensive
-**How to avoid:** Allocate at least 2GB RAM, prefer 4GB for production use
-**Warning signs:** Out-of-memory errors, slow gateway startup, request timeouts
+**What goes wrong:** Black screen, display corruption, VNC connection problems
+**Why it happens:** Incorrect display adapter configuration in Proxmox
+**How to avoid:** Use 'Standard VGA' or 'virtio-gpu' display adapter, configure VNC properly
+**Warning signs:** No desktop after login, corrupted display, VNC shows blank screen
 
-### Pitfall 3: Network Connectivity Issues
+### Pitfall 3: Auto-Login Security Risks
 
-**What goes wrong:** OpenClaw gateway fails to reach AI provider APIs
-**Why it happens:** Firewall rules, proxy settings, or DNS issues
-**How to avoid:** Test external connectivity during template creation
-**Warning signs:** API authentication failures, model request timeouts
+**What goes wrong:** Unauthorized access to desktop if VM console is accessible
+**Why it happens:** Auto-login bypasses authentication completely
+**How to avoid:** Secure VM console access, use VNC passwords, consider SSH key-only access
+**Warning signs:** Unauthorized desktop access, security audit failures
 
-### Pitfall 4: Docker Permission Problems
+### Pitfall 4: Network Service Conflicts
 
-**What goes wrong:** Sandbox containers fail to start or access files
-**Why it happens:** Docker socket permissions, user namespace conflicts
-**How to avoid:** Add openclaw user to docker group, verify Docker daemon is running
-**Warning signs:** "Permission denied" errors when using sandbox features
+**What goes wrong:** VNC server fails to start, port conflicts, connection refused
+**Why it happens:** Multiple remote desktop services or incorrect port configuration
+**How to avoid:** Choose one remote access method (VNC or RDP), configure firewall properly
+**Warning signs:** VNC connection failures, port binding errors
+
+### Pitfall 5: Cloud-Init Desktop Timing
+
+**What goes wrong:** Desktop components install before dependencies, service startup failures
+**Why it happens:** Cloud-init package installation order and service dependencies
+**How to avoid:** Use proper cloud-init phases, test automation thoroughly
+**Warning signs:** Failed package installations, services not starting automatically
 
 ## Code Examples
 
 Verified patterns from official sources:
 
-### Cloud-Init Template Creation
+### Proxmox VM Template Creation
 
 ```bash
-# Source: Proxmox best practices + OpenClaw docs
-export VMID=8007 STORAGE=local-zfs
-wget -q https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
-qemu-img resize noble-server-cloudimg-amd64.img 32G
+# Source: Proxmox documentation + Debian cloud images
+export VMID=9007 STORAGE=local-zfs
+wget https://cdimage.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2
+qemu-img resize debian-13-generic-amd64.qcow2 64G
 
-qm create $VMID --name "openclaw-template" --ostype l26 \
+qm create $VMID --name "openclaw-desktop-template" --ostype l26 \
     --memory 4096 --agent 1 \
     --bios ovmf --machine q35 --efidisk0 $STORAGE:0,pre-enrolled-keys=0 \
-    --cpu host --sockets 1 --cores 2 \
-    --vga serial0 --serial0 socket \
+    --cpu host --sockets 1 --cores 4 \
+    --vga virtio --serial0 socket \
     --net0 virtio,bridge=vmbr0
 
-qm importdisk $VMID noble-server-cloudimg-amd64.img $STORAGE
+qm importdisk $VMID debian-13-generic-amd64.qcow2 $STORAGE
 qm set $VMID --scsihw virtio-scsi-pci --virtio0 $STORAGE:vm-$VMID-disk-1,discard=on
 qm set $VMID --boot order=virtio0
 qm set $VMID --scsi1 $STORAGE:cloudinit
+qm set $VMID --cicustom "user=local:snippets/openclaw-desktop.yaml"
 ```
 
-### OpenClaw Installation Script
+### Complete Cloud-Init Configuration
 
 ```yaml
-# Source: https://docs.openclaw.ai/install
+# Source: Cloud-init documentation + Debian wiki
 #cloud-config
+hostname: openclaw-desktop
+manage_etc_hosts: true
+
 users:
   - name: openclaw
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo,audio,video
     shell: /bin/bash
-    ssh_authorized_keys:
-      - ssh-rsa AAAAB3...
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    passwd: $6$rounds=4096$salted$hash # Use proper password hash
+
+packages:
+  - task-xfce-desktop
+  - lightdm
+  - lightdm-gtk-greeter
+  - tigervnc-standalone-server
+  - xrdp
+  - qemu-guest-agent
+  - firefox-esr
+  - curl
+  - wget
+  - ca-certificates
+  - gnupg
+  - software-properties-common
+
+write_files:
+  - path: /etc/lightdm/lightdm.conf.d/50-autologin.conf
+    content: |
+      [Seat:*]
+      autologin-user=openclaw
+      autologin-user-timeout=0
+    permissions: "0644"
+
+  - path: /etc/systemd/system/vncserver@.service
+    content: |
+      [Unit]
+      Description=Start TigerVNC server at startup
+      After=syslog.target network.target
+
+      [Service]
+      Type=forking
+      User=openclaw
+      Group=openclaw
+      WorkingDirectory=/home/openclaw
+      ExecStartPre=-/usr/bin/vncserver -kill :%i > /dev/null 2>&1
+      ExecStart=/usr/bin/vncserver -depth 24 -geometry 1920x1080 :%i
+      ExecStop=/usr/bin/vncserver -kill :%i
+
+      [Install]
+      WantedBy=multi-user.target
+    permissions: "0644"
 
 runcmd:
-  - apt update && apt install -y curl docker.io
-  - usermod -aG docker openclaw
-  - sudo -u openclaw bash -c 'curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard'
-  - systemctl enable docker
+  # Install Node.js 22 via NodeSource
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+
+  # Install Google Chrome
+  - wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+  - echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/chrome.list
+  - apt-get update && apt-get install -y google-chrome-stable
+
+  # Configure VNC for openclaw user
+  - sudo -u openclaw mkdir -p /home/openclaw/.vnc
+  - echo "openclaw123" | sudo -u openclaw vncpasswd -f > /home/openclaw/.vnc/passwd
+  - sudo -u openclaw chmod 600 /home/openclaw/.vnc/passwd
+
+  # Enable services
+  - systemctl enable lightdm
+  - systemctl enable qemu-guest-agent
+  - systemctl enable vncserver@1
+
+  # Install OpenClaw
+  - sudo -u openclaw npm install -g openclaw@latest
+
+  # Final reboot to start desktop
   - reboot
 ```
 
 ## State of the Art
 
-| Old Approach            | Current Approach            | When Changed  | Impact                          |
-| ----------------------- | --------------------------- | ------------- | ------------------------------- |
-| Manual VM setup         | Cloud-init automation       | 2020+         | Reproducible deployments        |
-| System Node.js packages | NodeSource/installer script | 2024+         | Current versions, compatibility |
-| Custom sandboxing       | Docker-based isolation      | OpenClaw 2024 | Security, standardization       |
-| Direct API deployment   | Tailscale integration       | OpenClaw 2024 | Secure remote access            |
+| Old Approach                | Current Approach                | When Changed | Impact                           |
+| --------------------------- | ------------------------------- | ------------ | -------------------------------- |
+| Manual desktop setup        | Cloud-init automation           | 2020+        | Reproducible desktop deployments |
+| VNC-only access             | Multiple protocols (VNC/RDP)    | 2022+        | Better client compatibility      |
+| System Node.js packages     | NodeSource repositories         | 2024+        | Current versions, better support |
+| Heavy desktop (GNOME/KDE)   | Lightweight (XFCE/LXQt)         | 2023+        | Better VM performance            |
+| Manual browser installation | Official repository integration | 2021+        | Automatic updates                |
 
 **Deprecated/outdated:**
 
-- Manual Node.js compilation: Use installer script or NodeSource packages
-- Host-only deployment: Consider Docker sandboxing for security
+- Ubuntu-based templates: User specifies Debian 13
+- Headless-only approach: OpenClaw requires GUI applications
+- Manual VNC configuration: Use systemd services for reliability
 
 ## Open Questions
 
 Things that couldn't be fully resolved:
 
-1. **GPU Requirements**
-   - What we know: OpenClaw supports browser automation which may benefit from GPU
-   - What's unclear: Whether GPU passthrough improves performance significantly
-   - Recommendation: Start with CPU-only template, evaluate GPU needs based on usage
+1. **OpenClaw Specific Requirements**
+   - What we know: OpenClaw runs on Node.js and needs GUI application support
+   - What's unclear: Specific browser automation requirements, resource scaling
+   - Recommendation: Start with standard desktop template, monitor resource usage
 
-2. **Optimal Resource Allocation**
-   - What we know: Minimum 2GB RAM, benefits from multiple cores
-   - What's unclear: Exact scaling characteristics under load
-   - Recommendation: Monitor resource usage and adjust template defaults
+2. **Display Performance Optimization**
+   - What we know: VirtIO-GPU provides better performance than VGA
+   - What's unclear: OpenClaw's graphics requirements for browser automation
+   - Recommendation: Test both VGA and virtio-gpu, measure performance difference
+
+3. **Remote Access Security**
+   - What we know: VNC requires passwords, can be tunneled over SSH
+   - What's unclear: User's specific security requirements for remote access
+   - Recommendation: Implement basic VNC security, document SSH tunneling option
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-- https://docs.openclaw.ai - OpenClaw official documentation
-- https://github.com/openclaw/openclaw - Main repository with installation instructions
-- https://docs.openclaw.ai/install - Installation requirements and methods
+- https://cdimage.debian.org/images/cloud/trixie/ - Official Debian 13 cloud images
+- https://wiki.debian.org/DesktopEnvironment - Debian desktop environment options
+- https://pve.proxmox.com/wiki/Cloud-Init_Support - Proxmox cloud-init integration
+- https://wiki.debian.org/LightDM - LightDM auto-login configuration
 
 ### Secondary (MEDIUM confidence)
 
-- https://github.com/UntouchedWagons/Ubuntu-CloudInit-Docs - Proxmox VM template best practices
-- Proxmox VE documentation for cloud-init integration
+- https://wiki.debian.org/VNCviewer - VNC server options for Debian
+- https://github.com/nodesource/distributions - Node.js installation for Debian
+- https://www.debian.org/releases/trixie/ - Debian 13 release information
 
 ### Tertiary (LOW confidence)
 
-- GitHub search results for Proxmox automation patterns
+- Community discussions about desktop VM performance optimization
+- VNC security best practices (needs official verification)
 
 ## Metadata
 
 **Confidence breakdown:**
 
-- OpenClaw requirements: HIGH - Official documentation available
-- VM template creation: MEDIUM - Standard Proxmox patterns, need to verify specifics
-- Resource requirements: MEDIUM - Based on Node.js application patterns, needs validation
+- Base OS (Debian 13): HIGH - Official release, cloud images available
+- Desktop stack (XFCE/LightDM): HIGH - Standard Debian packages, well-documented
+- Cloud-init automation: HIGH - Proven Proxmox integration
+- VNC remote access: MEDIUM - Multiple implementation options available
+- Resource requirements: MEDIUM - Based on desktop + Node.js + browser patterns
 
 **Research date:** 2026-02-07
-**Valid until:** 60 days (stable technology stack)
+**Valid until:** 90 days (stable desktop technology stack)
+**Validation needed:** OpenClaw-specific resource requirements, display performance testing
