@@ -3,12 +3,12 @@
 ## Current Position
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
-**Phase:** 03-container-creation — In progress
-**Plan:** 3 of 4 in current phase
-**Status:** In progress
-**Last activity:** 2026-02-07 — Completed 03-03-PLAN.md
+**Phase:** 03-container-creation — Complete ✓
+**Plan:** 4 of 4 in current phase
+**Status:** Phase complete
+**Last activity:** 2026-02-07 — Completed 03-04-PLAN.md
 
-Progress: ██████░░░░ 67% (10/15 plans)
+Progress: ███████░░░ 73% (11/15 plans)
 
 ## Completed Work
 
@@ -33,7 +33,7 @@ Progress: ██████░░░░ 67% (10/15 plans)
 - ScriptEditor/FileEditor controlled sub-components
 - /templates/new and /templates/[id]/edit pages
 
-### Phase 3: Container Creation (In Progress)
+### Phase 3: Container Creation ✓
 
 **03-01 — Infrastructure** ✓
 
@@ -58,6 +58,14 @@ Progress: ██████░░░░ 67% (10/15 plans)
 - Server action creates Container DB record + enqueues BullMQ job
 - Password auto-generate (16-char) with clipboard copy
 - Template selection pre-populates downstream step defaults
+
+**03-04 — Container progress tracking** ✓
+
+- SSE endpoint with ContainerEvent replay on connect + Redis Pub/Sub live subscription
+- useContainerProgress EventSource hook with reactive state management
+- Progress page: 5-phase stepper, terminal-style log viewer, completion/error states
+- Service and credential display on completion with show/copy functionality
+- Services API route for fetching discovered services
 
 ## Decisions Made
 
@@ -87,10 +95,12 @@ Progress: ██████░░░░ 67% (10/15 plans)
 - Base schema pattern: split Zod schemas into base (for react-hook-form) and refined (for server validation) when using zodResolver
 - Manual password confirmation in onSubmit to avoid .refine() type mismatch with zodResolver
 - Template packages grouped by manager as toggle-able buckets in wizard UI
+- SSE replay pattern: replay persisted ContainerEvent rows on connect before Redis Pub/Sub subscription
+- Terminal state shortcircuit: if container is ready/error, replay and close without Redis subscription
+- Services fetched on completion via /api/containers/[id]/services rather than embedded in SSE stream
 
 ## Pending Work
 
-- Phase 3: Container Creation — Plan 04 (#82)
 - Phase 4: Container Management (#83-86)
 - Phase 5: Web UI & Monitoring (#87-88)
 - Phase 6: CI/CD & Deployment (#89-90)
@@ -107,6 +117,6 @@ Progress: ██████░░░░ 67% (10/15 plans)
 
 ## Session Continuity
 
-Last session: 2026-02-07T18:47:00Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-02-07T18:53:00Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
