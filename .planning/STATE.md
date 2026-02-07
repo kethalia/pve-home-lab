@@ -62,6 +62,12 @@ Progress: █████░░░░░ 47% (7/15 plans)
 
 - Docker-in-Docker networking: Coder workspace must join dashboard_default network for Redis/Postgres access (not localhost)
 
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 07 added: VM to Run OpenClaw
+
 ## Session Continuity
 
 Last session: 2026-02-06T14:21:55Z

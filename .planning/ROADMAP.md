@@ -98,3 +98,17 @@ Plans:
 - [ ] TBD — Docker config, CI/CD pipeline
 
 Issues: #89, #90
+
+---
+
+### Phase 07: VM to Run OpenClaw
+
+**Goal:** Create a VM template in infra/ that provisions a Debian 13 desktop VM with XFCE, Chrome, Node.js, VNC, and OpenClaw using the ProxmoxVE community script as foundation
+**Depends on:** Phase 06
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 07-01-PLAN.md — VM template structure: template.conf, minimal cloud-init bootstrap, and create-vm.sh wrapper
+- [ ] 07-02-PLAN.md — Post-install scripts (canonical software source): desktop, user, Chrome, Node.js, VNC, OpenClaw, validation
+- [ ] 07-03-PLAN.md — Script runner (run-scripts.sh) and README documentation
