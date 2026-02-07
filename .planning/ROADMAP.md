@@ -98,3 +98,17 @@ Plans:
 - [ ] TBD — Docker config, CI/CD pipeline
 
 Issues: #89, #90
+
+---
+
+### Phase 07: VM to Run Openclaw
+
+**Goal:** Extend template system to support VM templates with automated OpenClaw deployment via cloud-init
+**Depends on:** Phase 06
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 07-01-PLAN.md — Database schema extension and Proxmox VM API integration
+- [ ] 07-02-PLAN.md — VM template UI components and OpenClaw template creation
+- [ ] 07-03-PLAN.md — Template discovery engine and browser integration for VM templates
