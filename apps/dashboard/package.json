@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "dev:worker": "tsx --watch src/workers/container-creation.ts",
+    "dev:all": "concurrently --names next,worker --prefix-colors blue,green \"pnpm dev\" \"pnpm dev:worker\""
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -54,6 +56,7 @@
     "@types/react-dom": "^19",
     "@types/ssh2": "1.15.5",
     "@vitest/ui": "^4.0.18",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "eslint-config-prettier": "10.1.8",
