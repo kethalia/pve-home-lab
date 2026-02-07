@@ -4,11 +4,11 @@
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
 **Phase:** 03-container-creation — In progress
-**Plan:** 2 of 4 in current phase
+**Plan:** 3 of 4 in current phase
 **Status:** In progress
-**Last activity:** 2026-02-07 — Completed 03-02-PLAN.md
+**Last activity:** 2026-02-07 — Completed 03-03-PLAN.md
 
-Progress: ██████░░░░ 60% (9/15 plans)
+Progress: ██████░░░░ 67% (10/15 plans)
 
 ## Completed Work
 
@@ -51,6 +51,14 @@ Progress: ██████░░░░ 60% (9/15 plans)
 - Service/credential discovery from running containers → ContainerService records
 - Graceful shutdown on SIGTERM/SIGINT
 
+**03-03 — Container creation wizard UI** ✓
+
+- 5-step wizard: Template → Configure → Packages → Scripts → Review & Deploy
+- Zod validation schemas for each step with react-hook-form zodResolver
+- Server action creates Container DB record + enqueues BullMQ job
+- Password auto-generate (16-char) with clipboard copy
+- Template selection pre-populates downstream step defaults
+
 ## Decisions Made
 
 - Tech stack locked: Next.js 15, shadcn/ui, Tailwind v4, Prisma, PostgreSQL, Redis, BullMQ
@@ -76,10 +84,13 @@ Progress: ██████░░░░ 60% (9/15 plans)
 - Log events Redis-only; step/complete/error events persisted to ContainerEvent table
 - Static IP extraction from ipConfig; DHCP discovery deferred
 - Config-manager as systemd oneshot service with config.env and config-sync.sh
+- Base schema pattern: split Zod schemas into base (for react-hook-form) and refined (for server validation) when using zodResolver
+- Manual password confirmation in onSubmit to avoid .refine() type mismatch with zodResolver
+- Template packages grouped by manager as toggle-able buckets in wizard UI
 
 ## Pending Work
 
-- Phase 3: Container Creation — Plans 02-04 (#80-82)
+- Phase 3: Container Creation — Plan 04 (#82)
 - Phase 4: Container Management (#83-86)
 - Phase 5: Web UI & Monitoring (#87-88)
 - Phase 6: CI/CD & Deployment (#89-90)
@@ -96,6 +107,6 @@ Progress: ██████░░░░ 60% (9/15 plans)
 
 ## Session Continuity
 
-Last session: 2026-02-07T18:40:43Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-02-07T18:47:00Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
