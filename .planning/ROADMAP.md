@@ -109,6 +109,6 @@ Issues: #89, #90
 
 Plans:
 
-- [ ] 07-01-PLAN.md — VM template structure: template.conf, cloud-init user-data, and create-vm.sh wrapper
-- [ ] 07-02-PLAN.md — Post-install scripts: desktop, user, Chrome, Node.js, VNC, OpenClaw, validation
+- [ ] 07-01-PLAN.md — VM template structure: template.conf, minimal cloud-init bootstrap, and create-vm.sh wrapper
+- [ ] 07-02-PLAN.md — Post-install scripts (canonical software source): desktop, user, Chrome, Node.js, VNC, OpenClaw, validation
 - [ ] 07-03-PLAN.md — Script runner (run-scripts.sh) and README documentation
