@@ -18,56 +18,62 @@ export const templateSelectionSchema = z.object({
 // Step 2: Container Configuration
 // ============================================================================
 
-export const containerConfigSchema = z
-  .object({
-    hostname: z
-      .string()
-      .min(1, "Hostname is required")
-      .max(63, "Hostname must be 63 characters or less")
-      .regex(
-        /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/,
-        "Invalid hostname format — must start/end with alphanumeric, hyphens allowed in between",
-      ),
-    vmid: z.coerce
-      .number()
-      .int()
-      .min(100, "VMID must be ≥ 100")
-      .max(999999999, "VMID must be ≤ 999999999"),
-    rootPassword: z.string().min(5, "Password must be at least 5 characters"),
-    confirmPassword: z.string(),
-    cores: z.coerce.number().int().min(1, "Minimum 1 core").max(128).default(1),
-    memory: z.coerce
-      .number()
-      .int()
-      .min(128, "Minimum 128 MB")
-      .max(65536, "Maximum 65536 MB")
-      .default(512),
-    swap: z.coerce
-      .number()
-      .int()
-      .min(0, "Swap cannot be negative")
-      .max(65536, "Maximum 65536 MB")
-      .default(512),
-    diskSize: z.coerce
-      .number()
-      .int()
-      .min(1, "Minimum 1 GB")
-      .max(10240, "Maximum 10240 GB")
-      .default(8),
-    storage: z.string().min(1, "Storage is required"),
-    bridge: z.string().min(1, "Network bridge is required"),
-    ipConfig: z.string().default("ip=dhcp"),
-    nameserver: z.string().optional(),
-    unprivileged: z.boolean().default(true),
-    nesting: z.boolean().default(false),
-    sshPublicKey: z.string().optional(),
-    tags: z.string().optional(),
-    ostemplate: z.string().optional(),
-  })
-  .refine((data) => data.rootPassword === data.confirmPassword, {
+/**
+ * Base object schema for container config (used by react-hook-form).
+ * Uses z.number() instead of z.coerce.number() so that input/output types match
+ * (required for zodResolver compatibility with react-hook-form).
+ */
+export const containerConfigBaseSchema = z.object({
+  hostname: z
+    .string()
+    .min(1, "Hostname is required")
+    .max(63, "Hostname must be 63 characters or less")
+    .regex(
+      /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/,
+      "Invalid hostname format — must start/end with alphanumeric, hyphens allowed in between",
+    ),
+  vmid: z
+    .number()
+    .int()
+    .min(100, "VMID must be ≥ 100")
+    .max(999999999, "VMID must be ≤ 999999999"),
+  rootPassword: z.string().min(5, "Password must be at least 5 characters"),
+  confirmPassword: z.string(),
+  cores: z.number().int().min(1, "Minimum 1 core").max(128),
+  memory: z
+    .number()
+    .int()
+    .min(128, "Minimum 128 MB")
+    .max(65536, "Maximum 65536 MB"),
+  swap: z
+    .number()
+    .int()
+    .min(0, "Swap cannot be negative")
+    .max(65536, "Maximum 65536 MB"),
+  diskSize: z
+    .number()
+    .int()
+    .min(1, "Minimum 1 GB")
+    .max(10240, "Maximum 10240 GB"),
+  storage: z.string().min(1, "Storage is required"),
+  bridge: z.string().min(1, "Network bridge is required"),
+  ipConfig: z.string().min(1, "IP configuration is required"),
+  nameserver: z.string().optional(),
+  unprivileged: z.boolean(),
+  nesting: z.boolean(),
+  sshPublicKey: z.string().optional(),
+  tags: z.string().optional(),
+  ostemplate: z.string().optional(),
+});
+
+/** Full schema with password confirmation refinement */
+export const containerConfigSchema = containerConfigBaseSchema.refine(
+  (data) => data.rootPassword === data.confirmPassword,
+  {
     message: "Passwords do not match",
     path: ["confirmPassword"],
-  });
+  },
+);
 
 // ============================================================================
 // Step 3: Package Selection
@@ -147,7 +153,12 @@ export const createContainerInputSchema = z.object({
 // ============================================================================
 
 export type TemplateSelection = z.infer<typeof templateSelectionSchema>;
+/** Output type (after defaults applied) — used by server-side validation */
 export type ContainerConfig = z.infer<typeof containerConfigSchema>;
+/** Form values type — used by react-hook-form (matches output of base schema) */
+export type ContainerConfigFormValues = z.output<
+  typeof containerConfigBaseSchema
+>;
 export type PackageSelection = z.infer<typeof packageSelectionSchema>;
 export type ScriptConfig = z.infer<typeof scriptConfigSchema>;
 export type WizardState = z.infer<typeof wizardStateSchema>;
