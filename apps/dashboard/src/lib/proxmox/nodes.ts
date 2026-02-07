@@ -2,7 +2,7 @@
  * Proxmox VE node operations
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { z } from "zod";
 import type { ProxmoxClient } from "./client";
 import { ClusterNodeSchema, NodeStatusSchema } from "./schemas";

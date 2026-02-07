@@ -2,7 +2,7 @@
  * Proxmox VE authentication methods
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { fetch as undiciFetch, Agent } from "undici";
 import { ProxmoxClient } from "./client";
 import { TicketResponseSchema } from "./schemas";

@@ -2,7 +2,7 @@
  * Core Proxmox VE HTTP client
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { fetch as undiciFetch, Agent as UndiciAgent } from "undici";
 import type { ZodType } from "zod";
 import { ProxmoxApiError, ProxmoxAuthError, ProxmoxError } from "./errors";

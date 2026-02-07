@@ -2,7 +2,7 @@
  * Proxmox VE storage operations
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { z } from "zod";
 import type { ProxmoxClient } from "./client";
 import { StorageSchema } from "./schemas";

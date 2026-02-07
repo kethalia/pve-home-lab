@@ -3,7 +3,7 @@
  * Main entry point - exports all modules and factory functions
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 // Type-only import from generated Prisma client - does not violate db.ts import rule
 // as this is erased at runtime and only used for type checking
 import type { ProxmoxNode } from "@/generated/prisma/client";

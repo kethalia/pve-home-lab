@@ -5,7 +5,7 @@
  * hot-reload support. All database operations go through this class.
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 
 import { PrismaClient } from "@/generated/prisma/client";
 import type {

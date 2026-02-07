@@ -2,7 +2,7 @@
  * Proxmox VE task tracking and polling
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { z } from "zod";
 import { ProxmoxTaskError } from "./errors";
 import type { ProxmoxClient } from "./client";
