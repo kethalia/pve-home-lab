@@ -2,7 +2,7 @@
  * Proxmox VE task tracking and polling
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { z } from "zod";
 import { ProxmoxTaskError } from "./errors";
 import type { ProxmoxClient } from "./client";
@@ -96,8 +96,11 @@ export async function waitForTask(
         }
       }
 
-      // Check if task succeeded
-      if (status.exitstatus === "OK") {
+      // Check if task succeeded (OK or WARNINGS are both success)
+      if (
+        status.exitstatus === "OK" ||
+        status.exitstatus?.startsWith("WARNINGS:")
+      ) {
         return status;
       } else {
         // Task failed - get full log for error details

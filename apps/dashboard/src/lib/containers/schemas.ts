@@ -1,0 +1,171 @@
+/**
+ * Shared Zod schemas for the container creation wizard.
+ * Used by both server actions (validation) and client forms (react-hook-form).
+ */
+
+import { z } from "zod";
+
+// ============================================================================
+// Step 1: Template Selection
+// ============================================================================
+
+export const templateSelectionSchema = z.object({
+  templateId: z.string().nullable(), // null = "start from scratch"
+  templateName: z.string().nullable(),
+});
+
+// ============================================================================
+// Step 2: Container Configuration
+// ============================================================================
+
+/**
+ * Base object schema for container config (used by react-hook-form).
+ * Uses z.number() instead of z.coerce.number() so that input/output types match
+ * (required for zodResolver compatibility with react-hook-form).
+ */
+export const containerConfigBaseSchema = z.object({
+  targetNode: z.string().min(1, "Target node is required"),
+  hostname: z
+    .string()
+    .min(1, "Hostname is required")
+    .max(63, "Hostname must be 63 characters or less")
+    .regex(
+      /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/,
+      "Invalid hostname format — must start/end with alphanumeric, hyphens allowed in between",
+    ),
+  vmid: z
+    .number()
+    .int()
+    .min(100, "VMID must be ≥ 100")
+    .max(999999999, "VMID must be ≤ 999999999"),
+  rootPassword: z.string().min(5, "Password must be at least 5 characters"),
+  confirmPassword: z.string(),
+  cores: z.number().int().min(1, "Minimum 1 core").max(128),
+  memory: z
+    .number()
+    .int()
+    .min(128, "Minimum 128 MB")
+    .max(65536, "Maximum 65536 MB"),
+  swap: z
+    .number()
+    .int()
+    .min(0, "Swap cannot be negative")
+    .max(65536, "Maximum 65536 MB"),
+  diskSize: z
+    .number()
+    .int()
+    .min(1, "Minimum 1 GB")
+    .max(10240, "Maximum 10240 GB"),
+  storage: z.string().min(1, "Storage is required"),
+  bridge: z.string().min(1, "Network bridge is required"),
+  dhcp: z.boolean(),
+  ip: z.string().optional(),
+  gateway: z.string().optional(),
+  nameserver: z.string().optional(),
+  unprivileged: z.boolean(),
+  nesting: z.boolean(),
+  sshPublicKey: z.string().optional(),
+  tags: z.string().optional(),
+  ostemplate: z.string().min(1, "OS template is required"),
+});
+
+/** Full schema with password confirmation and IP validation refinements */
+export const containerConfigSchema = containerConfigBaseSchema
+  .refine((data) => data.rootPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.dhcp || (data.ip && data.ip.trim().length > 0), {
+    message: "IP address is required when DHCP is disabled",
+    path: ["ip"],
+  });
+
+// ============================================================================
+// Step 3: Package Selection
+// ============================================================================
+
+export const packageSelectionSchema = z.object({
+  enabledBuckets: z.array(z.string()), // enabled package manager names (e.g., "apt", "pip")
+  additionalPackages: z.string().optional(), // free-text additional packages
+});
+
+// ============================================================================
+// Step 4: Script Configuration
+// ============================================================================
+
+export const scriptConfigSchema = z.object({
+  scripts: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      enabled: z.boolean(),
+      order: z.number(),
+      description: z.string().nullable().optional(),
+    }),
+  ),
+});
+
+// ============================================================================
+// Combined Wizard State
+// ============================================================================
+
+export const wizardStateSchema = z.object({
+  step: z.number().min(1).max(5),
+  template: templateSelectionSchema.nullable(),
+  config: containerConfigSchema.nullable(),
+  packages: packageSelectionSchema.nullable(),
+  scripts: scriptConfigSchema.nullable(),
+});
+
+// ============================================================================
+// Schema for the server action input
+// ============================================================================
+
+export const createContainerInputSchema = z.object({
+  templateId: z.string().nullable(),
+  targetNode: z.string().optional(),
+  hostname: z.string().min(1),
+  vmid: z.coerce.number().int().min(100),
+  rootPassword: z.string().min(5),
+  cores: z.coerce.number().int().min(1).default(1),
+  memory: z.coerce.number().int().min(128).default(512),
+  swap: z.coerce.number().int().min(0).default(512),
+  diskSize: z.coerce.number().int().min(1).default(8),
+  storage: z.string().min(1),
+  bridge: z.string().min(1),
+  ipConfig: z.string().min(1, "IP configuration is required"),
+  nameserver: z.string().optional(),
+  unprivileged: z.boolean().default(true),
+  nesting: z.boolean().default(false),
+  sshPublicKey: z.string().optional(),
+  tags: z.string().optional(),
+  ostemplate: z.string().optional(),
+  enabledBuckets: z.array(z.string()).optional(),
+  additionalPackages: z.string().optional(),
+  scripts: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        enabled: z.boolean(),
+        order: z.number(),
+      }),
+    )
+    .optional(),
+});
+
+// ============================================================================
+// Inferred Types
+// ============================================================================
+
+export type TemplateSelection = z.infer<typeof templateSelectionSchema>;
+/** Output type (after defaults applied) — used by server-side validation */
+export type ContainerConfig = z.infer<typeof containerConfigSchema>;
+/** Form values type — used by react-hook-form (matches output of base schema) */
+export type ContainerConfigFormValues = z.output<
+  typeof containerConfigBaseSchema
+>;
+export type PackageSelection = z.infer<typeof packageSelectionSchema>;
+export type ScriptConfig = z.infer<typeof scriptConfigSchema>;
+export type WizardState = z.infer<typeof wizardStateSchema>;
+export type CreateContainerInput = z.infer<typeof createContainerInputSchema>;

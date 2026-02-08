@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { DatabaseService } from "@/lib/db";
 import { TemplateForm } from "@/components/templates/template-form";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Create Template",
   description: "Create a new LXC container template",

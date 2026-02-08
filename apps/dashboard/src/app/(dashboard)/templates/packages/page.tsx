@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { BucketCard } from "@/components/packages/bucket-card";
 import { BucketFormDialog } from "@/components/packages/bucket-form-dialog";
 
+export const dynamic = "force-dynamic";
+
 export default async function PackagesPage() {
   const buckets = await DatabaseService.listBuckets();
 

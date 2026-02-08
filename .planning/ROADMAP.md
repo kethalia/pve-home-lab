@@ -39,20 +39,45 @@ Issues: #76, #77, #78, #79
 
 ---
 
-### Phase 03: Container Creation
+### Phase 03: Container Creation ✓
 
 **Goal:** Users can configure and create LXC containers through a multi-step wizard with real-time progress
-**Status:** Not started
-**Plans:** 4 plans
+**Status:** Complete
+**Completed:** 2026-02-08
+**Plans:** 5 plans
 
 Plans:
 
-- [ ] 03-01-PLAN.md — Infrastructure: remove server-only guards, SSH session helper, BullMQ queue setup
-- [ ] 03-02-PLAN.md — Container creation engine: BullMQ worker with 5-phase pipeline
-- [ ] 03-03-PLAN.md — Wizard UI: 5-step container configuration form with server action
-- [ ] 03-04-PLAN.md — Progress tracking: SSE endpoint, useContainerProgress hook, progress page UI
+- [x] 03-01-PLAN.md — Infrastructure: remove server-only guards, SSH session helper, BullMQ queue setup
+- [x] 03-02-PLAN.md — Container creation engine: BullMQ worker with 5-phase pipeline
+- [x] 03-03-PLAN.md — Wizard UI: 5-step container configuration form with server action
+- [x] 03-04-PLAN.md — Progress tracking: SSE endpoint, useContainerProgress hook, progress page UI
+- [x] 03-05-PLAN.md — Gap closure: OS template selector in wizard Configure step
 
 Issues: #80, #81, #82
+
+---
+
+### Phase 03.5: Auth Refactor — Multi-User DB Credentials
+
+**Goal:** Replace env-var Proxmox auth with multi-user DB-stored credentials managed through a Settings UI
+**Status:** Not started
+**Depends on:** Phase 03
+**Plans:** 0 plans
+
+Key deliverables:
+
+- Settings page to add/edit/delete Proxmox nodes with encrypted credentials
+- User authentication (local accounts or external identity provider)
+- Per-user node access control
+- Credentials encrypted at rest using existing `encrypt`/`decrypt` utils
+- Migrate `getProxmoxClient()` to resolve credentials from DB `ProxmoxNode` records
+- Remove dependency on `PVE_HOST`, `PVE_PORT`, `PVE_ROOT_PASSWORD` env vars
+- `ProxmoxNode` Prisma model already has `host`, `port`, `tokenId`, `tokenSecret` fields
+
+Plans:
+
+- [ ] TBD
 
 ---
 

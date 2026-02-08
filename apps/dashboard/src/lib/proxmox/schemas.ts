@@ -187,13 +187,16 @@ export const TaskLogEntrySchema = z.object({
 // Storage
 // ============================================================================
 
+// Proxmox returns booleans as 0/1 integers — coerce to proper booleans
+const pveBoolean = z.union([z.boolean(), z.number()]).transform((v) => !!v);
+
 export const StorageSchema = z.object({
   storage: z.string(),
   type: z.string(),
   content: z.string().optional(),
-  shared: z.boolean().optional(),
-  active: z.boolean().optional(),
-  enabled: z.boolean().optional(),
+  shared: pveBoolean.optional(),
+  active: pveBoolean.optional(),
+  enabled: pveBoolean.optional(),
   total: z.number().optional(),
   used: z.number().optional(),
   avail: z.number().optional(),
@@ -202,6 +205,15 @@ export const StorageSchema = z.object({
 // ============================================================================
 // Template (aplinfo)
 // ============================================================================
+
+export const StorageContentSchema = z
+  .object({
+    volid: z.string(), // e.g. "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+    format: z.string(), // e.g. "tar.zst", "tar.gz"
+    size: z.number(), // bytes
+    content: z.string(), // "vztmpl"
+  })
+  .passthrough();
 
 export const TemplateSchema = z.object({
   package: z.string(),

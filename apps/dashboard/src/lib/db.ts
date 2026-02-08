@@ -1,3 +1,5 @@
+// No "server-only" — used by worker process (runs outside Next.js via tsx)
+
 /**
  * Database Service Layer
  *
@@ -5,9 +7,15 @@
  * hot-reload support. All database operations go through this class.
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 
-import { PrismaClient } from "@/generated/prisma/client";
+import {
+  PrismaClient,
+  ContainerLifecycle,
+  EventType,
+  ServiceType,
+  ServiceStatus,
+} from "@/generated/prisma/client";
 import type {
   ProxmoxNode,
   Template,
@@ -17,6 +25,9 @@ import type {
   PackageBucket,
   PackageManager,
   FilePolicy,
+  Container,
+  ContainerEvent,
+  ContainerService,
 } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -45,6 +56,9 @@ if (process.env.NODE_ENV !== "production") {
 
 /** Direct Prisma instance export for complex operations (e.g., transactions) */
 export { prismaInstance as prisma };
+
+/** Re-export enums for worker and consumer use */
+export { ContainerLifecycle, EventType, ServiceType, ServiceStatus };
 
 // ============================================================================
 // Derived Types
@@ -564,5 +578,109 @@ export class DatabaseService {
    */
   static async getBucketCount(): Promise<number> {
     return this.prisma.packageBucket.count();
+  }
+
+  // ============================================================================
+  // Container Operations
+  // ============================================================================
+
+  /**
+   * Create a new container record.
+   */
+  static async createContainer(data: {
+    vmid: number;
+    rootPassword: string; // Already encrypted
+    nodeId: string;
+    templateId?: string;
+  }): Promise<Container> {
+    return this.prisma.container.create({ data });
+  }
+
+  /**
+   * Get a container by ID with related node, template, and services.
+   */
+  static async getContainerById(id: string): Promise<
+    | (Container & {
+        node: ProxmoxNode;
+        template: Template | null;
+        services: ContainerService[];
+      })
+    | null
+  > {
+    return this.prisma.container.findUnique({
+      where: { id },
+      include: { node: true, template: true, services: true },
+    });
+  }
+
+  /**
+   * Update a container's lifecycle status.
+   */
+  static async updateContainerLifecycle(
+    id: string,
+    lifecycle: ContainerLifecycle,
+  ): Promise<Container> {
+    return this.prisma.container.update({
+      where: { id },
+      data: { lifecycle },
+    });
+  }
+
+  // ============================================================================
+  // ContainerEvent Operations
+  // ============================================================================
+
+  /**
+   * Create a container event (audit log entry).
+   */
+  static async createContainerEvent(data: {
+    containerId: string;
+    type: EventType;
+    message: string;
+    metadata?: string; // JSON string
+  }): Promise<ContainerEvent> {
+    return this.prisma.containerEvent.create({ data });
+  }
+
+  /**
+   * Get all events for a container, ordered chronologically.
+   */
+  static async getContainerEvents(
+    containerId: string,
+  ): Promise<ContainerEvent[]> {
+    return this.prisma.containerEvent.findMany({
+      where: { containerId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  // ============================================================================
+  // ContainerService Operations
+  // ============================================================================
+
+  /**
+   * Create a container service record.
+   */
+  static async createContainerService(data: {
+    containerId: string;
+    name: string;
+    type: ServiceType;
+    port?: number;
+    webUrl?: string;
+    status?: ServiceStatus;
+    credentials?: string; // JSON string, encrypted
+  }): Promise<ContainerService> {
+    return this.prisma.containerService.create({ data });
+  }
+
+  /**
+   * Get all services for a container.
+   */
+  static async getContainerServices(
+    containerId: string,
+  ): Promise<ContainerService[]> {
+    return this.prisma.containerService.findMany({
+      where: { containerId },
+    });
   }
 }

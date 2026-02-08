@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAction } from "next-safe-action/hooks";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -197,20 +197,23 @@ export function TemplateForm({ mode, template, buckets }: TemplateFormProps) {
   useEffect(() => {
     form.setValue(
       "scripts",
-      scripts.map(({ _key: _, ...s }) => s),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      scripts.map(({ _key, ...s }) => s),
     );
   }, [scripts, form]);
 
   useEffect(() => {
     form.setValue(
       "files",
-      files.map(({ _key: _, ...f }) => f),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      files.map(({ _key, ...f }) => f),
     );
   }, [files, form]);
 
   // ----- Helpers -----
 
-  const selectedBucketIds = form.watch("bucketIds") ?? [];
+  const selectedBucketIds =
+    useWatch({ control: form.control, name: "bucketIds" }) ?? [];
 
   const toggleBucket = (bucketId: string) => {
     const current = form.getValues("bucketIds") ?? [];

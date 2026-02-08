@@ -2,7 +2,7 @@
  * Core Proxmox VE HTTP client
  */
 
-import "server-only";
+// Server-side module — do not import from client components
 import { fetch as undiciFetch, Agent as UndiciAgent } from "undici";
 import type { ZodType } from "zod";
 import { ProxmoxApiError, ProxmoxAuthError, ProxmoxError } from "./errors";
@@ -99,7 +99,6 @@ export class ProxmoxClient {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       ...this.getAuthHeaders(),
-      "Content-Type": "application/json",
     };
 
     const fetchOptions: Record<string, unknown> = {
@@ -114,6 +113,7 @@ export class ProxmoxClient {
         headers["Content-Type"] = "application/x-www-form-urlencoded";
       } else {
         fetchOptions.body = JSON.stringify(body);
+        headers["Content-Type"] = "application/json";
       }
     }
 

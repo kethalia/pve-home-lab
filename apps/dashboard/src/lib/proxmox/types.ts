@@ -14,6 +14,7 @@ import type {
   TaskStatusSchema,
   TaskLogEntrySchema,
   StorageSchema,
+  StorageContentSchema,
   TemplateSchema,
 } from "./schemas";
 
@@ -125,6 +126,8 @@ export interface ProxmoxTaskWaitOptions {
 // ============================================================================
 
 export type ProxmoxStorage = z.infer<typeof StorageSchema>;
+
+export type ProxmoxStorageContent = z.infer<typeof StorageContentSchema>;
 
 // ============================================================================
 // Template (Response type inferred from Zod schema)

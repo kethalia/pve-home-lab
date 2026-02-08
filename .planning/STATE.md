@@ -3,12 +3,12 @@
 ## Current Position
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
-**Phase:** 02-template-system — Complete
+**Phase:** 03-container-creation — Complete ✓
 **Plan:** 5 of 5 in current phase
-**Status:** Phase 02 complete
-**Last activity:** 2026-02-06 — Completed 02-05-PLAN.md
+**Status:** Phase complete
+**Last activity:** 2026-02-08 — Completed 03-05-PLAN.md
 
-Progress: █████░░░░░ 47% (7/15 plans)
+Progress: ████████░░ 80% (12/15 plans)
 
 ## Completed Work
 
@@ -33,6 +33,48 @@ Progress: █████░░░░░ 47% (7/15 plans)
 - ScriptEditor/FileEditor controlled sub-components
 - /templates/new and /templates/[id]/edit pages
 
+### Phase 3: Container Creation ✓
+
+**03-01 — Infrastructure** ✓
+
+- Removed server-only from 9 shared modules for worker process compatibility
+- SSHSession class with exec, execStreaming, uploadFile, connectWithRetry
+- BullMQ queue definition with typed job data and progress events
+- DatabaseService Container/ContainerEvent/ContainerService CRUD methods
+- dev:worker and dev:all scripts with concurrently
+
+**03-02 — Container creation worker** ✓
+
+- BullMQ Worker with 5-phase pipeline: Create → Start → Deploy config-manager → Run scripts → Discover services
+- Config-manager infrastructure: /etc/config-manager/, config.env, config-sync.sh, systemd service
+- Real-time progress via Redis Pub/Sub + DB persistence for step/error/complete events
+- Service/credential discovery from running containers → ContainerService records
+- Graceful shutdown on SIGTERM/SIGINT
+
+**03-03 — Container creation wizard UI** ✓
+
+- 5-step wizard: Template → Configure → Packages → Scripts → Review & Deploy
+- Zod validation schemas for each step with react-hook-form zodResolver
+- Server action creates Container DB record + enqueues BullMQ job
+- Password auto-generate (16-char) with clipboard copy
+- Template selection pre-populates downstream step defaults
+
+**03-04 — Container progress tracking** ✓
+
+- SSE endpoint with ContainerEvent replay on connect + Redis Pub/Sub live subscription
+- useContainerProgress EventSource hook with reactive state management
+- Progress page: 5-phase stepper, terminal-style log viewer, completion/error states
+- Service and credential display on completion with show/copy functionality
+- Services API route for fetching discovered services
+
+**03-05 — OS template selector (gap closure)** ✓
+
+- OS template dropdown in Configure step shows downloaded templates from Proxmox storage
+- StorageContentSchema and listDownloadedTemplates for fetching vztmpl content
+- WizardOsTemplate interface with human-readable template names
+- Selected ostemplate flows through wizard to createContainerAction
+- Removed hardcoded Debian fallback - user must select real template
+
 ## Decisions Made
 
 - Tech stack locked: Next.js 15, shadcn/ui, Tailwind v4, Prisma, PostgreSQL, Redis, BullMQ
@@ -50,10 +92,23 @@ Progress: █████░░░░░ 47% (7/15 plans)
 - Bucket selection copies packages into template (template owns its package list)
 - **CONVENTION: Always use shadcn/ui components** — never create custom HTML elements (badges, alerts, forms, selects, etc.) when a shadcn component exists or can be installed. Custom implementations only as last resort. Forms must use shadcn Form (react-hook-form) not raw `<form>` tags. Documented in `apps/dashboard/CLAUDE.md`. (#102)
 - **CONVENTION: Cookie writes forbidden in RSC** — never call session.destroy() or modify cookies in Server Components or layouts. Cookie mutations only in Server Actions, Route Handlers, or middleware. (Next.js 16+ requirement)
+- Removed server-only from shared modules (kept in session.ts, discovery.ts, parser.ts — Next.js-only)
+- Lazy-initialized queue pattern for BullMQ (matches getRedis approach)
+- connectWithRetry: 5 attempts, 2s initial delay, exponential backoff for SSH readiness
+- Re-exported Prisma enums from db.ts for consumer convenience
+- Dual Redis connections in worker: workerConnection (maxRetriesPerRequest: null) + publisher (Pub/Sub)
+- Log events Redis-only; step/complete/error events persisted to ContainerEvent table
+- Static IP extraction from ipConfig; DHCP discovery deferred
+- Config-manager as systemd oneshot service with config.env and config-sync.sh
+- Base schema pattern: split Zod schemas into base (for react-hook-form) and refined (for server validation) when using zodResolver
+- Manual password confirmation in onSubmit to avoid .refine() type mismatch with zodResolver
+- Template packages grouped by manager as toggle-able buckets in wizard UI
+- SSE replay pattern: replay persisted ContainerEvent rows on connect before Redis Pub/Sub subscription
+- Terminal state shortcircuit: if container is ready/error, replay and close without Redis subscription
+- Services fetched on completion via /api/containers/[id]/services rather than embedded in SSE stream
 
 ## Pending Work
 
-- Phase 3: Container Creation (#80-82)
 - Phase 4: Container Management (#83-86)
 - Phase 5: Web UI & Monitoring (#87-88)
 - Phase 6: CI/CD & Deployment (#89-90)
@@ -70,6 +125,6 @@ Progress: █████░░░░░ 47% (7/15 plans)
 
 ## Session Continuity
 
-Last session: 2026-02-06T14:21:55Z
-Stopped at: Completed 02-05-PLAN.md (Phase 02 complete)
+Last session: 2026-02-08T10:14:59Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None

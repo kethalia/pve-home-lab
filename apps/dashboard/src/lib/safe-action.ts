@@ -1,8 +1,23 @@
+import "server-only";
+
 import {
   createSafeActionClient,
   DEFAULT_SERVER_ERROR_MESSAGE,
 } from "next-safe-action";
-import { getSessionData, type RedisSessionData } from "@/lib/session";
+
+/**
+ * Error class for user-facing action errors.
+ * Throw this inside server actions to surface a specific message to the client
+ * instead of the generic "Something went wrong" default.
+ *
+ * Usage: throw new ActionError("VMID 600 is already in use. Pick a different ID.");
+ */
+export class ActionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ActionError";
+  }
+}
 
 /**
  * Classify errors for safe client responses.
@@ -35,34 +50,36 @@ function isNetworkError(error: Error): boolean {
  */
 export const actionClient = createSafeActionClient({
   handleServerError(error) {
+    // ActionError: intentionally user-facing, pass message through
+    if (error instanceof ActionError) {
+      return error.message;
+    }
+
     if (error instanceof Error && isNetworkError(error)) {
       return "Unable to reach Proxmox server";
     }
+
+    // Log unexpected errors server-side for debugging
+    console.error("[safe-action] Unhandled server error:", error);
 
     return DEFAULT_SERVER_ERROR_MESSAGE;
   },
 });
 
 /**
- * Authenticated action client — requires valid session.
+ * Authenticated action client — verifies Proxmox env vars are configured.
  * Use for: all protected actions (template CRUD, container ops, settings).
  *
- * Injects `session` into the action context so every authenticated action
- * gets typed access to the current user's session data.
+ * Auth is provided by PVE_HOST + PVE_ROOT_PASSWORD env vars.
+ * This middleware just validates the server is properly configured.
+ * Will be replaced with real multi-user auth when DB-stored credentials are added.
  */
 export const authActionClient = actionClient.use(async ({ next }) => {
-  const session = await getSessionData();
-
-  if (!session) {
-    throw new Error("Unauthorized");
+  if (!process.env.PVE_HOST || !process.env.PVE_ROOT_PASSWORD) {
+    throw new Error(
+      "Server not configured: PVE_HOST and PVE_ROOT_PASSWORD environment variables are required.",
+    );
   }
 
-  return next({ ctx: { session } });
+  return next({ ctx: {} });
 });
-
-/**
- * Type helper for the auth context injected by authActionClient.
- */
-export type AuthContext = {
-  session: RedisSessionData;
-};

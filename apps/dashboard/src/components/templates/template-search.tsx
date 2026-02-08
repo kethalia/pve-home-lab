@@ -10,6 +10,7 @@ import {
   InputGroupAction,
 } from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Inner search component that uses useSearchParams.
@@ -150,7 +151,7 @@ export function TemplateSearch({ tags }: { tags: string[] }) {
     <Suspense
       fallback={
         <div className="flex flex-col gap-3">
-          <div className="h-9 rounded-md bg-muted animate-pulse" />
+          <Skeleton className="h-9 w-full" />
         </div>
       }
     >

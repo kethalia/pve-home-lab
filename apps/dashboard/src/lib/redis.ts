@@ -1,3 +1,5 @@
+// No "server-only" — used by worker process (runs outside Next.js via tsx)
+
 import Redis from "ioredis";
 
 let redis: Redis | null = null;
