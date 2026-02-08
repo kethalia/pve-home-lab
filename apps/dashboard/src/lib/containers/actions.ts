@@ -10,7 +10,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { authActionClient } from "@/lib/safe-action";
+import { authActionClient, ActionError } from "@/lib/safe-action";
 import { DatabaseService, prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
 import { getContainerCreationQueue } from "@/lib/queue/container-creation";
@@ -407,7 +407,7 @@ export const createContainerAction = authActionClient
     // Get session for Proxmox credentials
     const sessionData = await getSessionData();
     if (!sessionData) {
-      throw new Error("Session expired. Please log in again.");
+      throw new ActionError("Session expired. Please log in again.");
     }
 
     // Get or create a Proxmox node (auto-creates from env if no DB nodes exist)
@@ -416,18 +416,62 @@ export const createContainerAction = authActionClient
     // Encrypt password for DB storage
     const encryptedPassword = encrypt(data.rootPassword);
 
-    // Create container record
-    const container = await DatabaseService.createContainer({
-      vmid: data.vmid,
-      rootPassword: encryptedPassword,
-      nodeId,
-      templateId: data.templateId || undefined,
-    });
+    // Create container record — handle VMID conflicts from stale records
+    let container;
+    try {
+      container = await DatabaseService.createContainer({
+        vmid: data.vmid,
+        rootPassword: encryptedPassword,
+        nodeId,
+        templateId: data.templateId || undefined,
+      });
+    } catch (err: unknown) {
+      // Check for Prisma unique constraint violation on vmid
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err.code === "P2002"
+      ) {
+        // Try to clean up stale record from a previous failed creation
+        const existing = await prisma.container.findUnique({
+          where: { vmid: data.vmid },
+          select: { id: true, lifecycle: true },
+        });
+
+        if (
+          existing &&
+          (existing.lifecycle === "error" || existing.lifecycle === "creating")
+        ) {
+          // Delete stale record and its related events/services, then retry
+          await prisma.containerEvent.deleteMany({
+            where: { containerId: existing.id },
+          });
+          await prisma.containerService.deleteMany({
+            where: { containerId: existing.id },
+          });
+          await prisma.container.delete({ where: { id: existing.id } });
+
+          container = await DatabaseService.createContainer({
+            vmid: data.vmid,
+            rootPassword: encryptedPassword,
+            nodeId,
+            templateId: data.templateId || undefined,
+          });
+        } else {
+          throw new ActionError(
+            `VMID ${data.vmid} is already in use by an active container. Please choose a different VMID.`,
+          );
+        }
+      } else {
+        throw err;
+      }
+    }
 
     // Resolve OS template path
     const ostemplate = data.ostemplate || "";
     if (!ostemplate) {
-      throw new Error(
+      throw new ActionError(
         "OS template is required. Please select an OS template in the Configure step.",
       );
     }
