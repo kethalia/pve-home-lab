@@ -27,11 +27,7 @@ import {
   ServiceStatus,
   prisma,
 } from "../lib/db";
-import {
-  createProxmoxClient,
-  createProxmoxClientFromNode,
-} from "../lib/proxmox";
-import type { ProxmoxTicketCredentials } from "../lib/proxmox";
+import { getProxmoxClient } from "../lib/proxmox";
 import { createContainer, startContainer } from "../lib/proxmox/containers";
 import { waitForTask } from "../lib/proxmox/tasks";
 import { connectWithRetry, PctExecSession, type SSHSession } from "../lib/ssh";
@@ -148,7 +144,6 @@ async function processContainerCreation(
     nodeName,
     templateId,
     config,
-    proxmoxCredentials,
     enabledBuckets,
     additionalPackages,
     scripts: scriptSelections,
@@ -160,39 +155,9 @@ async function processContainerCreation(
     // Phase 1: Create Container (0-20%)
     // ========================================================================
 
-    // Build Proxmox client — prefer DB node with real API token, fall back to ticket auth
-    const node = await DatabaseService.getNodeById(nodeId);
-    if (!node) {
-      throw new Error(`Proxmox node not found: ${nodeId}`);
-    }
-
-    let client;
-    let pveNodeName = nodeName;
-
-    if (!node.tokenId.endsWith("!session")) {
-      // DB node has a real API token — use it
-      client = createProxmoxClientFromNode(node);
-      pveNodeName = node.name;
-    } else if (proxmoxCredentials) {
-      // Fall back to session ticket credentials from job payload
-      const ticketCreds: ProxmoxTicketCredentials = {
-        type: "ticket",
-        ticket: proxmoxCredentials.ticket,
-        csrfToken: proxmoxCredentials.csrfToken,
-        username: proxmoxCredentials.username,
-        expiresAt: new Date(proxmoxCredentials.expiresAt),
-      };
-      client = createProxmoxClient({
-        host: proxmoxCredentials.host,
-        port: proxmoxCredentials.port,
-        credentials: ticketCreds,
-        verifySsl: false,
-      });
-    } else {
-      throw new Error(
-        "No valid Proxmox credentials available. DB node has placeholder token and no session credentials in job.",
-      );
-    }
+    // Authenticate via env vars (PVE_HOST + PVE_ROOT_PASSWORD)
+    const client = await getProxmoxClient();
+    const pveNodeName = nodeName;
 
     await publishProgress(containerId, {
       type: "step",
@@ -277,8 +242,12 @@ async function processContainerCreation(
 
     // Connect to the Proxmox host node and use pct exec/push to configure
     // the container. This avoids needing SSH inside the container.
-    const pveHost = proxmoxCredentials?.host || node.host;
+    const pveHost = process.env.PVE_HOST;
     const pveRootPassword = process.env.PVE_ROOT_PASSWORD;
+
+    if (!pveHost) {
+      throw new Error("PVE_HOST env var is required for container setup.");
+    }
 
     if (!pveRootPassword) {
       throw new Error(
@@ -297,6 +266,31 @@ async function processContainerCreation(
     await publishProgress(containerId, {
       type: "log",
       message: `Connected to ${pveHost}, using pct exec for CT ${config.vmid}`,
+    });
+
+    // Wait for container to be fully ready (systemd initialized)
+    // pct push fails if /etc/systemd/system/ doesn't exist yet
+    await publishProgress(containerId, {
+      type: "log",
+      message: "Waiting for container filesystem to be ready...",
+    });
+
+    for (let attempt = 1; attempt <= 15; attempt++) {
+      const check = await ssh.exec(
+        "test -d /etc/systemd/system && echo ready || echo not-ready",
+      );
+      if (check.stdout.trim() === "ready") break;
+      if (attempt === 15) {
+        throw new Error(
+          "Container filesystem not ready after 15 attempts — /etc/systemd/system not found",
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    await publishProgress(containerId, {
+      type: "log",
+      message: "Container filesystem ready",
     });
 
     // Phase 3a: Deploy config-manager infrastructure
@@ -516,11 +510,12 @@ WantedBy=multi-user.target
         .filter((p) => p.manager === "apt")
         .map((p) => p.name);
 
-      // Append free-text additional packages (assumed apt)
+      // Append free-text additional packages (one per line, assumed apt)
       if (additionalPackages) {
         const extra = additionalPackages
-          .split(/[\s,]+/)
-          .filter((p) => p.trim());
+          .split(/\n/)
+          .map((p) => p.trim())
+          .filter(Boolean);
         aptPackages.push(...extra);
       }
 
@@ -821,13 +816,41 @@ const worker = new Worker<ContainerJobData, ContainerJobResult>(
 );
 
 worker.on("completed", (job, result) => {
-  console.log(
-    `Job ${job.id} completed: container=${result.containerId} success=${result.success}`,
-  );
+  const config = job.data.config;
+  if (result.success) {
+    console.log("");
+    console.log("========================================");
+    console.log("  CONTAINER CREATED SUCCESSFULLY");
+    console.log("========================================");
+    console.log(`  Hostname:  ${config.hostname}`);
+    console.log(`  VMID:      ${config.vmid}`);
+    console.log(`  Node:      ${job.data.nodeName}`);
+    console.log(`  IP:        ${config.ipConfig}`);
+    console.log(`  Storage:   ${config.storage}`);
+    console.log("========================================");
+    console.log("");
+  } else {
+    console.error("");
+    console.error("========================================");
+    console.error("  CONTAINER CREATION FAILED");
+    console.error("========================================");
+    console.error(`  Hostname:  ${config.hostname}`);
+    console.error(`  VMID:      ${config.vmid}`);
+    console.error(`  Error:     ${result.error}`);
+    console.error("========================================");
+    console.error("");
+  }
 });
 
 worker.on("failed", (job, err) => {
-  console.error(`Job ${job?.id} failed:`, err.message);
+  console.error("");
+  console.error("========================================");
+  console.error("  JOB FAILED (unhandled)");
+  console.error("========================================");
+  console.error(`  Job ID:  ${job?.id}`);
+  console.error(`  Error:   ${err.message}`);
+  console.error("========================================");
+  console.error("");
 });
 
 // ============================================================================

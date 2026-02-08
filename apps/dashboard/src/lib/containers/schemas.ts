@@ -58,13 +58,9 @@ export const containerConfigBaseSchema = z.object({
     .max(10240, "Maximum 10240 GB"),
   storage: z.string().min(1, "Storage is required"),
   bridge: z.string().min(1, "Network bridge is required"),
-  ipConfig: z
-    .string()
-    .min(1, "IP configuration is required")
-    .refine((val) => !val.includes("dhcp"), {
-      message:
-        "DHCP is not supported — use a static IP (e.g., ip=10.0.0.50/24,gw=10.0.0.1)",
-    }),
+  dhcp: z.boolean(),
+  ip: z.string().optional(),
+  gateway: z.string().optional(),
   nameserver: z.string().optional(),
   unprivileged: z.boolean(),
   nesting: z.boolean(),
@@ -73,14 +69,16 @@ export const containerConfigBaseSchema = z.object({
   ostemplate: z.string().min(1, "OS template is required"),
 });
 
-/** Full schema with password confirmation refinement */
-export const containerConfigSchema = containerConfigBaseSchema.refine(
-  (data) => data.rootPassword === data.confirmPassword,
-  {
+/** Full schema with password confirmation and IP validation refinements */
+export const containerConfigSchema = containerConfigBaseSchema
+  .refine((data) => data.rootPassword === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
-  },
-);
+  })
+  .refine((data) => data.dhcp || (data.ip && data.ip.trim().length > 0), {
+    message: "IP address is required when DHCP is disabled",
+    path: ["ip"],
+  });
 
 // ============================================================================
 // Step 3: Package Selection
@@ -135,13 +133,7 @@ export const createContainerInputSchema = z.object({
   diskSize: z.coerce.number().int().min(1).default(8),
   storage: z.string().min(1),
   bridge: z.string().min(1),
-  ipConfig: z
-    .string()
-    .min(1, "IP configuration is required")
-    .refine((val) => !val.includes("dhcp"), {
-      message:
-        "DHCP is not supported — use a static IP (e.g., ip=10.0.0.50/24,gw=10.0.0.1)",
-    }),
+  ipConfig: z.string().min(1, "IP configuration is required"),
   nameserver: z.string().optional(),
   unprivileged: z.boolean().default(true),
   nesting: z.boolean().default(false),

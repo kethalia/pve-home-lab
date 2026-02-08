@@ -58,6 +58,29 @@ Issues: #80, #81, #82
 
 ---
 
+### Phase 03.5: Auth Refactor — Multi-User DB Credentials
+
+**Goal:** Replace env-var Proxmox auth with multi-user DB-stored credentials managed through a Settings UI
+**Status:** Not started
+**Depends on:** Phase 03
+**Plans:** 0 plans
+
+Key deliverables:
+
+- Settings page to add/edit/delete Proxmox nodes with encrypted credentials
+- User authentication (local accounts or external identity provider)
+- Per-user node access control
+- Credentials encrypted at rest using existing `encrypt`/`decrypt` utils
+- Migrate `getProxmoxClient()` to resolve credentials from DB `ProxmoxNode` records
+- Remove dependency on `PVE_HOST`, `PVE_PORT`, `PVE_ROOT_PASSWORD` env vars
+- `ProxmoxNode` Prisma model already has `host`, `port`, `tokenId`, `tokenSecret` fields
+
+Plans:
+
+- [ ] TBD
+
+---
+
 ### Phase 04: Container Management
 
 **Goal:** Users can monitor and control container lifecycle with a dashboard overview

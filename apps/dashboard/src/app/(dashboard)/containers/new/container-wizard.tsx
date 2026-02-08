@@ -105,6 +105,18 @@ export function ContainerWizard({
   async function handleDeploy() {
     if (!configData) return;
 
+    // Build Proxmox ipConfig string from separate fields
+    let ipConfig: string;
+    if (configData.dhcp) {
+      ipConfig = "ip=dhcp";
+    } else {
+      const parts = [`ip=${configData.ip}`];
+      if (configData.gateway) {
+        parts.push(`gw=${configData.gateway}`);
+      }
+      ipConfig = parts.join(",");
+    }
+
     startTransition(async () => {
       const result = await createContainerAction({
         templateId: templateData?.templateId ?? null,
@@ -118,7 +130,7 @@ export function ContainerWizard({
         diskSize: configData.diskSize,
         storage: configData.storage,
         bridge: configData.bridge,
-        ipConfig: configData.ipConfig,
+        ipConfig,
         nameserver: configData.nameserver,
         unprivileged: configData.unprivileged,
         nesting: configData.nesting,

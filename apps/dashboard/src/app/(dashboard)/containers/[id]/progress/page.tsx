@@ -159,10 +159,32 @@ export default function ContainerProgressPage() {
   if (isComplete) {
     return (
       <div className="mx-auto w-full max-w-2xl space-y-6">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="size-6 text-green-500" />
-          <h1 className="text-2xl font-bold">Container Ready</h1>
-        </div>
+        {/* Success banner */}
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="flex flex-col items-center gap-3 py-8">
+            <div className="flex size-16 items-center justify-center rounded-full bg-green-500/10">
+              <CheckCircle2 className="size-9 text-green-500" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Container Ready</h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Your container has been created and is running.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button onClick={() => router.push(`/containers/${containerId}`)}>
+                View Container
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/containers/new")}
+              >
+                <Plus className="size-4" />
+                Create Another
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="space-y-4">
@@ -192,24 +214,6 @@ export default function ContainerProgressPage() {
             </CardContent>
           </Card>
         ) : null}
-
-        {/* Actions */}
-        <Card>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => router.push(`/containers/${containerId}`)}>
-                View Container
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/containers/new")}
-              >
-                <Plus className="size-4" />
-                Create Another
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         <LogViewer logs={logs} />
       </div>

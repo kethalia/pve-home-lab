@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import Redis from "ioredis";
 import { DatabaseService } from "@/lib/db";
-import { getSessionData } from "@/lib/session";
 import {
   getProgressChannel,
   type ContainerProgressEvent,
@@ -24,12 +23,6 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // Validate session — only authenticated users can stream progress
-  const session = await getSessionData();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id: containerId } = await params;
 
   // Verify container exists
@@ -131,9 +124,9 @@ export async function GET(
         }
       }
 
-      // Check terminal state
+      // Check terminal state — use container lifecycle as source of truth,
+      // NOT DB event types (which can collide between step events and completion).
       const hasError = existingEvents.some((e) => e.type === "error");
-      const hasComplete = existingEvents.some((e) => e.type === "created");
       const errorEvent = existingEvents.find((e) => e.type === "error");
 
       // Send a single snapshot event with the current state
@@ -143,8 +136,7 @@ export async function GET(
           step: lastStep,
           percent: isTerminal && !hasError ? 100 : lastPercent,
           seenSteps,
-          isComplete:
-            hasComplete || (isTerminal && container.lifecycle === "ready"),
+          isComplete: isTerminal && container.lifecycle === "ready",
           isError: hasError || (isTerminal && container.lifecycle === "error"),
           errorMessage:
             errorEvent?.message ||

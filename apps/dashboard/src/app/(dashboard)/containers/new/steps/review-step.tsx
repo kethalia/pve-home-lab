@@ -133,7 +133,14 @@ export function ReviewStep({
           <CardContent className="pt-0 space-y-1">
             <ReviewItem label="Storage" value={config.storage} />
             <ReviewItem label="Bridge" value={config.bridge} />
-            <ReviewItem label="IP Config" value={config.ipConfig} />
+            <ReviewItem
+              label="IP Config"
+              value={
+                config.dhcp
+                  ? "DHCP"
+                  : `${config.ip}${config.gateway ? ` / gw ${config.gateway}` : ""}`
+              }
+            />
             {config.nameserver && (
               <ReviewItem label="Nameserver" value={config.nameserver} />
             )}

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Copy, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -84,10 +85,16 @@ export function ConfigureStep({
   onNext,
   onBack,
 }: ConfigureStepProps) {
+  // Sort all dropdown data alphabetically
+  const sortedNodes = useMemo(
+    () => [...clusterNodes].sort((a, b) => a.node.localeCompare(b.node)),
+    [clusterNodes],
+  );
+
   const form = useForm<ContainerConfigFormValues>({
     resolver: zodResolver(containerConfigBaseSchema),
     defaultValues: {
-      targetNode: data?.targetNode ?? clusterNodes[0]?.node ?? "",
+      targetNode: data?.targetNode ?? sortedNodes[0]?.node ?? "",
       hostname: data?.hostname ?? "",
       vmid: data?.vmid ?? nextVmid,
       rootPassword: data?.rootPassword ?? "",
@@ -103,7 +110,9 @@ export function ConfigureStep({
         "",
       bridge:
         data?.bridge ?? defaultsFromTemplate?.bridge ?? bridges[0]?.iface ?? "",
-      ipConfig: data?.ipConfig ?? "ip=dhcp",
+      dhcp: data?.dhcp ?? true,
+      ip: data?.ip ?? "",
+      gateway: data?.gateway ?? "",
       nameserver: data?.nameserver ?? "",
       unprivileged:
         data?.unprivileged ?? defaultsFromTemplate?.unprivileged ?? true,
@@ -120,17 +129,27 @@ export function ConfigureStep({
 
   // Watch target node to filter storages, bridges, and OS templates per-node
   const selectedNode = useWatch({ control: form.control, name: "targetNode" });
+  const isDhcp = useWatch({ control: form.control, name: "dhcp" });
 
   const filteredStorages = useMemo(
-    () => storages.filter((s) => s.node === selectedNode),
+    () =>
+      storages
+        .filter((s) => s.node === selectedNode)
+        .sort((a, b) => a.storage.localeCompare(b.storage)),
     [storages, selectedNode],
   );
   const filteredBridges = useMemo(
-    () => bridges.filter((b) => b.node === selectedNode),
+    () =>
+      bridges
+        .filter((b) => b.node === selectedNode)
+        .sort((a, b) => a.iface.localeCompare(b.iface)),
     [bridges, selectedNode],
   );
   const filteredOsTemplates = useMemo(
-    () => osTemplates.filter((t) => t.node === selectedNode),
+    () =>
+      osTemplates
+        .filter((t) => t.node === selectedNode)
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [osTemplates, selectedNode],
   );
 
@@ -234,18 +253,15 @@ export function ConfigureStep({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Proxmox Node</FormLabel>
-                  {clusterNodes.length > 0 ? (
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                  {sortedNodes.length > 0 ? (
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a node" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {clusterNodes.map((n) => (
+                        {sortedNodes.map((n) => (
                           <SelectItem key={n.node} value={n.node}>
                             {n.node}
                             {n.maxcpu != null && n.maxmem != null
@@ -606,19 +622,55 @@ export function ConfigureStep({
                 )}
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="dhcp"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel className="!mt-0">Use DHCP</FormLabel>
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
-                name="ipConfig"
+                name="ip"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>IP Configuration</FormLabel>
+                    <FormLabel>IP Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="ip=dhcp" {...field} />
+                      <Input
+                        placeholder="10.0.0.50/24"
+                        disabled={isDhcp}
+                        {...field}
+                      />
                     </FormControl>
                     <FormDescription>
-                      e.g. ip=dhcp or ip=10.0.0.50/24,gw=10.0.0.1
+                      CIDR notation (e.g. 10.0.0.50/24)
                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="gateway"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gateway</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="10.0.0.1"
+                        disabled={isDhcp}
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

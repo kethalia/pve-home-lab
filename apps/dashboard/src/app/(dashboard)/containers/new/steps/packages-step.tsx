@@ -150,13 +150,13 @@ export function PackagesStep({
         </Label>
         <Textarea
           id="additional-packages"
-          placeholder="One package per line, e.g.&#10;htop&#10;curl&#10;vim"
+          placeholder={"htop\ncurl\nvim"}
           rows={4}
           value={additionalPackages}
           onChange={(e) => setAdditionalPackages(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          Enter one package name per line. These will be installed via apt.
+          One package name per line. These will be installed via apt.
         </p>
       </div>
 

@@ -205,6 +205,7 @@ export class PctExecSession {
   /**
    * Upload a file into the container via `pct push`.
    * Writes to a temp file on the host, then pushes into the container.
+   * Throws if pct push fails (e.g., target directory doesn't exist in container).
    */
   async uploadFile(
     content: string | Buffer,
@@ -215,14 +216,23 @@ export class PctExecSession {
     const tmpPath = `/tmp/.pct-upload-${this.vmid}-${Date.now()}`;
     await this.hostSession.uploadFile(content, tmpPath, 0o644);
 
-    // Push from host into container
-    const permsArg = mode ? ` --perms 0${mode.toString(8)}` : "";
-    await this.hostSession.exec(
-      `pct push ${this.vmid} ${tmpPath} ${remotePath}${permsArg}`,
-    );
+    try {
+      // Push from host into container
+      const permsArg = mode ? ` --perms 0${mode.toString(8)}` : "";
+      const result = await this.hostSession.exec(
+        `pct push ${this.vmid} ${tmpPath} ${remotePath}${permsArg}`,
+      );
 
-    // Clean up temp file on host
-    await this.hostSession.exec(`rm -f ${tmpPath}`);
+      if (result.code !== 0) {
+        const errMsg = (result.stderr || result.stdout).trim();
+        throw new Error(
+          `pct push failed for ${remotePath} (exit code ${result.code}): ${errMsg}`,
+        );
+      }
+    } finally {
+      // Clean up temp file on host regardless of success/failure
+      await this.hostSession.exec(`rm -f ${tmpPath}`);
+    }
   }
 
   /**

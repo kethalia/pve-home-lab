@@ -5,18 +5,19 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { getSessionData } from "@/lib/session";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSessionData();
+  // Auth is env-var based — display "root@pam" as the user identity.
+  // Will be replaced with real user lookup when multi-user auth is added.
+  const username = "root@pam";
 
   return (
     <SidebarProvider>
-      <AppSidebar username={session?.username} />
+      <AppSidebar username={username} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
