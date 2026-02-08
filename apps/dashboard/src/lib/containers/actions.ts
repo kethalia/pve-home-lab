@@ -252,7 +252,7 @@ export async function getWizardData(): Promise<WizardData> {
             .passthrough(),
         ),
       ),
-      client.get("/cluster/nextid", z.number()),
+      client.get("/cluster/nextid", z.coerce.number()),
     ]);
 
     // Filter storages that support container rootdir/images content
