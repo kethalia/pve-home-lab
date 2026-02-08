@@ -3,7 +3,7 @@ status: complete
 phase: 03-container-creation
 source: [03-01-SUMMARY.md, 03-02-SUMMARY.md, 03-03-SUMMARY.md, 03-04-SUMMARY.md]
 started: 2026-02-07T20:00:00Z
-updated: 2026-02-08T01:30:00Z
+updated: 2026-02-08T14:00:00Z
 ---
 
 ## Current Test
@@ -67,38 +67,53 @@ result: pass
 expected: Clicking Deploy on the review step triggers a loading state on the button and redirects to /containers/[id]/progress when the server action completes.
 result: pass
 
-### 12. Progress Page — Stepper UI
+### 12. Session Auth — Wizard Populates from Proxmox
 
-expected: The /containers/[id]/progress page shows a 5-phase stepper (Creating → Starting → Deploying → Running Scripts → Finalizing) with a progress bar and percentage.
-result: skipped
-reason: Requires a Proxmox node to be configured and a container creation job to be enqueued. No Proxmox node available in test environment.
+expected: With session-auth now merged, go to /containers/new → Step 2 (Configure). The Storage dropdown shows real Proxmox storages (e.g., local, local-lvm). The Network Bridge dropdown shows real bridges (e.g., vmbr0). The VMID field auto-populates with the next available ID. No "No Proxmox node configured" warning.
+result: pass
 
-### 13. Progress Page — Log Viewer
+### 13. Deploy — Container Creation Starts
 
-expected: Below the stepper, a dark terminal-style log viewer displays real-time output messages. It auto-scrolls as new lines appear.
-result: skipped
-reason: Requires active container creation job with streaming progress events.
+expected: Fill out the wizard with valid config (hostname, static IP, password) and click Deploy. The button shows a loading state, redirects to /containers/[id]/progress, and the progress page connects to the SSE stream showing the 5-phase stepper with "Creating" as the active step.
+result: pass
 
 ### 14. Progress Page — Error State
 
-expected: If container creation fails, the page shows a red error header with the error message, the stepper shows which step failed, and a "Try Again" button navigates back to /containers/new.
-result: skipped
-reason: Requires a container creation job that fails mid-pipeline.
+expected: If container creation fails, the page shows a red error header with the error message, the stepper shows status, and a "Try Again" button navigates back to /containers/new.
+result: pass
 
-### 15. Progress Page — Completion State
+### 15. Progress Page — Full Success (Completion State)
 
 expected: When creation succeeds, the page shows a green "Container Ready" header, stepper at 100%, discovered services with credentials (show/hide/copy), and "View Container" + "Create Another" buttons.
-result: skipped
-reason: Requires a successfully completed container creation with discovered services.
+result: issue
+reported: "Creation fails because there's no OS template selector — the fallback template path doesn't exist on Proxmox. Need a dropdown to select available OS templates and auto-download if missing."
+severity: blocker
 
 ## Summary
 
 total: 15
-passed: 11
-issues: 0
+passed: 14
+issues: 1
 pending: 0
-skipped: 4
+skipped: 0
 
 ## Gaps
 
-[none]
+- truth: "User can successfully create a container through the wizard end-to-end"
+  status: failed
+  reason: "User reported: Creation fails because there's no OS template selector — the fallback template path doesn't exist on Proxmox. Need a dropdown to select available OS templates and auto-download if missing."
+  severity: blocker
+  test: 15
+  root_cause: "Wizard Configure step has no OS template field. When using 'Start from Scratch', ostemplate defaults to a hardcoded Debian path that may not exist on the user's Proxmox storage. Proxmox has an API to list available templates (GET /nodes/{node}/aplinfo) and download them (POST /nodes/{node}/aplinfo). The wizard needs: (1) a dropdown showing templates already on storage, (2) a way to download missing templates, (3) populate ostemplate in the container config."
+  artifacts:
+  - path: "apps/dashboard/src/app/(dashboard)/containers/new/steps/configure-step.tsx"
+    issue: "No OS template selection field"
+  - path: "apps/dashboard/src/lib/containers/actions.ts"
+    issue: "getWizardData() doesn't fetch available OS templates from Proxmox; createContainerAction uses hardcoded fallback"
+    missing:
+  - "Fetch downloaded templates from Proxmox storage (GET /nodes/{node}/storage/{storage}/content?content=vztmpl)"
+  - "Fetch available templates from Proxmox (GET /nodes/{node}/aplinfo) for download option"
+  - "OS template dropdown in Configure step showing downloaded templates"
+  - "Download button/flow for templates not yet on storage"
+  - "Pass selected ostemplate through wizard data flow to createContainerAction"
+    debug_session: ""
