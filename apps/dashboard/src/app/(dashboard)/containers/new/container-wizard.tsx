@@ -220,7 +220,6 @@ export function ContainerWizard({
           packages={packagesData}
           scripts={scriptsData}
           templatePackages={selectedTemplate?.packages ?? []}
-          clusterNodes={clusterNodes}
           isPending={isPending}
           onDeploy={handleDeploy}
           onBack={handleBack}

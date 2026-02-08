@@ -140,7 +140,6 @@ async function processContainerCreation(
 ): Promise<ContainerJobResult> {
   const {
     containerId,
-    nodeId,
     nodeName,
     templateId,
     config,

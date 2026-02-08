@@ -16,7 +16,6 @@ import { encrypt } from "@/lib/encryption";
 import { getContainerCreationQueue } from "@/lib/queue/container-creation";
 import {
   getProxmoxClient,
-  createProxmoxClientFromNode,
   storage,
   nodes as proxmoxNodes,
   templates as proxmoxTemplates,

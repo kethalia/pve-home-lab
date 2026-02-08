@@ -16,15 +16,12 @@ import { Separator } from "@/components/ui/separator";
 import type { ContainerConfig } from "@/lib/containers/schemas";
 import type { PackageSelection } from "@/lib/containers/schemas";
 import type { ScriptConfig } from "@/lib/containers/schemas";
-import type { WizardNode } from "@/lib/containers/actions";
-
 interface ReviewStepProps {
   templateName: string | null;
   config: ContainerConfig | null;
   packages: PackageSelection | null;
   scripts: ScriptConfig | null;
   templatePackages: Array<{ id: string; name: string; manager: string }>;
-  clusterNodes: WizardNode[];
   isPending: boolean;
   onDeploy: () => void;
   onBack: () => void;
@@ -38,7 +35,6 @@ export function ReviewStep({
   packages,
   scripts,
   templatePackages,
-  clusterNodes,
   isPending,
   onDeploy,
   onBack,
