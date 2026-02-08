@@ -4,11 +4,11 @@
 
 **Project:** LXC Template Manager Dashboard (apps/dashboard)
 **Phase:** 03-container-creation — Complete ✓
-**Plan:** 4 of 4 in current phase
+**Plan:** 5 of 5 in current phase
 **Status:** Phase complete
-**Last activity:** 2026-02-07 — Completed 03-04-PLAN.md
+**Last activity:** 2026-02-08 — Completed 03-05-PLAN.md
 
-Progress: ███████░░░ 73% (11/15 plans)
+Progress: ████████░░ 80% (12/15 plans)
 
 ## Completed Work
 
@@ -67,6 +67,14 @@ Progress: ███████░░░ 73% (11/15 plans)
 - Service and credential display on completion with show/copy functionality
 - Services API route for fetching discovered services
 
+**03-05 — OS template selector (gap closure)** ✓
+
+- OS template dropdown in Configure step shows downloaded templates from Proxmox storage
+- StorageContentSchema and listDownloadedTemplates for fetching vztmpl content
+- WizardOsTemplate interface with human-readable template names
+- Selected ostemplate flows through wizard to createContainerAction
+- Removed hardcoded Debian fallback - user must select real template
+
 ## Decisions Made
 
 - Tech stack locked: Next.js 15, shadcn/ui, Tailwind v4, Prisma, PostgreSQL, Redis, BullMQ
@@ -117,6 +125,6 @@ Progress: ███████░░░ 73% (11/15 plans)
 
 ## Session Continuity
 
-Last session: 2026-02-07T18:53:00Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-02-08T10:14:59Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
