@@ -34,7 +34,7 @@ import {
 import type { ProxmoxTicketCredentials } from "../lib/proxmox";
 import { createContainer, startContainer } from "../lib/proxmox/containers";
 import { waitForTask } from "../lib/proxmox/tasks";
-import { connectWithRetry, type SSHSession } from "../lib/ssh";
+import { connectWithRetry, PctExecSession, type SSHSession } from "../lib/ssh";
 import { encrypt } from "../lib/encryption";
 
 // ============================================================================
@@ -153,7 +153,7 @@ async function processContainerCreation(
     additionalPackages,
     scripts: scriptSelections,
   } = job.data;
-  let ssh: SSHSession | null = null;
+  let ssh: SSHSession | PctExecSession | null = null;
 
   try {
     // ========================================================================
@@ -265,31 +265,38 @@ async function processContainerCreation(
     // Phase 3: Deploy config-manager and template files via SSH (35-60%)
     // ========================================================================
 
+    // Extract container IP for web URLs in service discovery
+    const containerIp = extractIpFromConfig(config.ipConfig);
+
     await publishProgress(containerId, {
       type: "step",
       step: "deploying",
       percent: 40,
-      message: "Connecting to container via SSH...",
+      message: "Connecting to Proxmox host...",
     });
 
-    // Determine container IP
-    const containerIp = extractIpFromConfig(config.ipConfig);
-    if (!containerIp) {
+    // Connect to the Proxmox host node and use pct exec/push to configure
+    // the container. This avoids needing SSH inside the container.
+    const pveHost = proxmoxCredentials?.host || node.host;
+    const pveRootPassword = process.env.PVE_ROOT_PASSWORD;
+
+    if (!pveRootPassword) {
       throw new Error(
-        "Cannot determine container IP. DHCP discovery not yet implemented. Use static IP in container config (e.g., ip=10.0.0.50/24,gw=10.0.0.1).",
+        "PVE_ROOT_PASSWORD env var is required for container setup via pct exec. " +
+          "Set it to the root password of your Proxmox host.",
       );
     }
 
-    // Connect via SSH with retry (SSH takes seconds to become available)
-    ssh = await connectWithRetry({
-      host: containerIp,
+    const hostSsh = await connectWithRetry({
+      host: pveHost,
       username: "root",
-      password: config.rootPassword,
+      password: pveRootPassword,
     });
+    ssh = new PctExecSession(hostSsh, config.vmid);
 
     await publishProgress(containerId, {
       type: "log",
-      message: `SSH connected to ${containerIp}`,
+      message: `Connected to ${pveHost}, using pct exec for CT ${config.vmid}`,
     });
 
     // Phase 3a: Deploy config-manager infrastructure

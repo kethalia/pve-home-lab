@@ -154,6 +154,86 @@ export class SSHSession {
 }
 
 // ============================================================================
+// PctExecSession — routes commands through Proxmox host via pct exec/push
+// ============================================================================
+
+/**
+ * Wraps an SSHSession connected to a Proxmox host node and routes all
+ * commands through `pct exec` and file uploads through `pct push`.
+ *
+ * This avoids needing SSH configured inside the LXC container — commands
+ * run directly via the Proxmox container runtime.
+ *
+ * Implements the same interface as SSHSession so it can be used as a
+ * drop-in replacement in the worker pipeline.
+ */
+export class PctExecSession {
+  private hostSession: SSHSession;
+  private vmid: number;
+
+  constructor(hostSession: SSHSession, vmid: number) {
+    this.hostSession = hostSession;
+    this.vmid = vmid;
+  }
+
+  /**
+   * Execute a command inside the container via `pct exec`.
+   */
+  async exec(command: string): Promise<SSHExecResult> {
+    // pct exec <vmid> -- bash -c '<command>'
+    // Use bash -c to support pipes, redirects, and chained commands
+    const escaped = command.replace(/'/g, "'\\''");
+    return this.hostSession.exec(
+      `pct exec ${this.vmid} -- bash -c '${escaped}'`,
+    );
+  }
+
+  /**
+   * Execute a command inside the container with streaming output via `pct exec`.
+   */
+  async execStreaming(
+    command: string,
+    onOutput: (line: string, isStderr: boolean) => void,
+  ): Promise<number> {
+    const escaped = command.replace(/'/g, "'\\''");
+    return this.hostSession.execStreaming(
+      `pct exec ${this.vmid} -- bash -c '${escaped}'`,
+      onOutput,
+    );
+  }
+
+  /**
+   * Upload a file into the container via `pct push`.
+   * Writes to a temp file on the host, then pushes into the container.
+   */
+  async uploadFile(
+    content: string | Buffer,
+    remotePath: string,
+    mode?: number,
+  ): Promise<void> {
+    // Write content to a temp file on the Proxmox host
+    const tmpPath = `/tmp/.pct-upload-${this.vmid}-${Date.now()}`;
+    await this.hostSession.uploadFile(content, tmpPath, 0o644);
+
+    // Push from host into container
+    const permsArg = mode ? ` --perms 0${mode.toString(8)}` : "";
+    await this.hostSession.exec(
+      `pct push ${this.vmid} ${tmpPath} ${remotePath}${permsArg}`,
+    );
+
+    // Clean up temp file on host
+    await this.hostSession.exec(`rm -f ${tmpPath}`);
+  }
+
+  /**
+   * Close the underlying host SSH connection.
+   */
+  close(): void {
+    this.hostSession.close();
+  }
+}
+
+// ============================================================================
 // connectWithRetry — exponential backoff for new containers
 // ============================================================================
 
