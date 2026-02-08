@@ -1,6 +1,8 @@
 import { getWizardData } from "@/lib/containers/actions";
 import { ContainerWizard } from "./container-wizard";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Create Container",
   description: "Configure and deploy a new LXC container",

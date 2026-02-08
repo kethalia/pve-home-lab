@@ -12,6 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -395,24 +400,34 @@ export function ConfigureStep({
                       <FormControl>
                         <Input type="password" {...field} />
                       </FormControl>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleGenerate}
-                        title="Generate password"
-                      >
-                        <RefreshCw className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopy}
-                        title="Copy password"
-                      >
-                        <Copy className="size-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handleGenerate}
+                          >
+                            <RefreshCw className="size-4" />
+                            <span className="sr-only">Generate password</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Generate password</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handleCopy}
+                          >
+                            <Copy className="size-4" />
+                            <span className="sr-only">Copy password</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy password</TooltipContent>
+                      </Tooltip>
                     </div>
                     <FormMessage />
                   </FormItem>

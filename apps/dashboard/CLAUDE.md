@@ -18,6 +18,17 @@ Always use shadcn/ui components. Never create custom HTML elements when a shadcn
 - Inputs: Use `<Input>`, `<Textarea>`, `<Select>`, `<Switch>`, `<Checkbox>` from `@/components/ui/` — never raw HTML equivalents
 - Labels: Use `<FormLabel>` inside `FormField`, or `<Label>` from `@/components/ui/label` outside form contexts
 
+### Registry Check Before Custom Code
+
+Before building any custom UI pattern, check the [shadcn/ui registry](https://ui.shadcn.com/docs/components) for an existing component. The registry is updated frequently — components like `Progress`, `Stepper`, `Skeleton`, `Tooltip`, `Drawer`, `Carousel` etc. may already exist. If a shadcn component covers 80%+ of the need, use it and customize via `className` rather than building from scratch.
+
+### Common shadcn Substitutions
+
+- Loading placeholders: Use `<Skeleton>` — never custom `<div className="animate-pulse">`
+- Tooltips: Use `<Tooltip>` + `<TooltipTrigger>` + `<TooltipContent>` — never `title` attribute on buttons
+- Progress bars: Use `<Progress>` for simple bars. Custom only when needing dynamic color changes (e.g., green at 100%)
+- Separators: Use `<Separator>` for standalone dividers. Inline `border-t`/`border-b` inside Cards is acceptable
+
 ### Adding New Components
 
 If a shadcn component is needed but not installed, add it:
