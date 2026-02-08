@@ -42,9 +42,9 @@ Issues: #76, #77, #78, #79
 ### Phase 03: Container Creation ✓
 
 **Goal:** Users can configure and create LXC containers through a multi-step wizard with real-time progress
-**Status:** Complete
+**Status:** Complete (gap closure in progress)
 **Completed:** 2026-02-07
-**Plans:** 4 plans
+**Plans:** 5 plans
 
 Plans:
 
@@ -52,6 +52,7 @@ Plans:
 - [x] 03-02-PLAN.md — Container creation engine: BullMQ worker with 5-phase pipeline
 - [x] 03-03-PLAN.md — Wizard UI: 5-step container configuration form with server action
 - [x] 03-04-PLAN.md — Progress tracking: SSE endpoint, useContainerProgress hook, progress page UI
+- [ ] 03-05-PLAN.md — Gap closure: OS template selector in wizard Configure step
 
 Issues: #80, #81, #82
 
