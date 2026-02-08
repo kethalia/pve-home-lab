@@ -1,3 +1,5 @@
+// No "server-only" — used by worker process (runs outside Next.js via tsx)
+
 /**
  * Proxmox VE API Client
  * Main entry point - exports all modules and factory functions

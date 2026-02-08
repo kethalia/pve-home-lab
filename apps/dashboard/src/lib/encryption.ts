@@ -1,3 +1,5 @@
+// No "server-only" — used by worker process (runs outside Next.js via tsx)
+
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";

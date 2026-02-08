@@ -1,4 +1,4 @@
-// Server-side module — do not import from client components
+// No "server-only" — used by worker process (runs outside Next.js via tsx)
 
 import { Queue } from "bullmq";
 import { getRedis } from "../redis";
