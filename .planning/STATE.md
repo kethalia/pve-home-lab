@@ -122,6 +122,7 @@ Progress: ████████░░ 80% (12/15 plans)
 ### Roadmap Evolution
 
 - Phase 07 added: VM to Run OpenClaw
+- Phase 08 added: Proxmox LXC Container Template Engine
 
 ## Session Continuity
 
